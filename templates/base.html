@@ -86,7 +86,8 @@
 <header class="header">
     <div class="container">
         <div class="header-content">
-            <a href="#" class="logo"><img src="static/rtla1.png" class="rounded float-start" alt="logo rtla"></a>
+            <a href="{{ url_for('disparos') }}" class="logo"><img src="static/rtla1.png" class="rounded float-start"
+                    alt="logo rtla"></a>
             <nav class="nav-menu">
                 {% if current_user.is_admin %}
                 <a href="{{ url_for('registro') }}" class="nav-link">
