@@ -3,7 +3,7 @@ from config import find_token, db_connect
 from utils.logger import Logger
 from datetime import datetime, timedelta
 
-hoje = datetime.now()
+today = datetime.now()
 
 
 logger = Logger().get_logger()
@@ -69,9 +69,9 @@ def auto_reply(phone_number_id, reply_to, message_id, message_body):
     Função responsável por responder automaticamente mensagens recebidas.
     """
 
-    twodaysago = hoje - timedelta(days=2)
+    two_days_ago = today - timedelta(days=2)
 
-    params = [reply_to, "Resposta automática", twodaysago, hoje]
+    params = [reply_to, phone_number_id, "Resposta automática", two_days_ago, today]
 
     try:
         
@@ -82,12 +82,12 @@ def auto_reply(phone_number_id, reply_to, message_id, message_body):
             SELECT 
                count(*)
             FROM message_history 
-            WHERE recipient_id = %s AND message_content = %s AND created_at BETWEEN %s AND %s
+            WHERE recipient_id = %s AND sender_id = %s AND message_content = %s AND created_at BETWEEN %s AND %s
                 """
 
         cursor.execute(query, params)
         resultados = cursor.fetchall()
-        print(resultados if resultados else "Não há mensagens")
+        
         pg.desconectar()
        
 
