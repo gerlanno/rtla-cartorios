@@ -95,11 +95,11 @@ def auto_reply(phone_number_id, reply_to, message_id, message_body):
         logger.error(f"Erro - {e}")
 
     if resultados[0][0] > 0:
-
+        
         logger.info(f"Resposta automática já enviada: {message_id}")      
         
     else:
-
+        logger.info(f"Resultado query {resultados}")
         reply_message = """Olá, Eu sou o 🤖 do Atendimento Virtual do *Instituto de Cartórios de Protestos do Ceará - IEPTBCE*, o seu Assistente Virtual para informações. Caso tenha recebido um alerta, favor entre em contato com nosso SAC no link: https://wa.me/5585982009501 ou acesso nosso site: https://site.ieptbce.com.br"""
 
         whatsapp_token = find_token(phone_number_id)
