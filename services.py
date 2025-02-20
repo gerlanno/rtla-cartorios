@@ -241,7 +241,7 @@ def message_received(
                             VALUES (%s, %s, %s,%s,%s);"""
 
         vars = (message_id, sender_id, recipient_id, message_content, message_status)
-        logger.info(vars, query)
+       
 
         cursor.execute(query, vars)
         pg.conn.commit()
@@ -482,5 +482,3 @@ def check_exists_reply(sender_id):
         logger.error(f"Erro ao buscar detalhes da mensagem: {e}")
         return []
 
-
-auto_reply("130290610176023","5585992058133", "wamid.HBgMNTU4NTkyMDU4MTMzFQIAERgSNUQwQTI4MEUyMUZFMDBCMTBDAA==", "Testando range de datas auto reply")
