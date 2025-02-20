@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if erro %}
+<div class="alert alert-warning mt-3" role="alert">
+    <strong>Aviso:</strong>
+    {{ erro.error }}
+</div>
+<div class="text-center mt-3">
+    <a href="{{ url_for('disparos') }}" class="btn btn-primary">Ir para Disparos</a>
+</div>
+{% else %}
+{% if not current_user.is_authenticated %}
+
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="mb-0">Login</h2>
+                    </div>
+
+                    <div class="card-body">
+                        <form id="login-form" action="{{ url_for('login') }}" method="POST">
+                            <div class="mb-3">
+                                <label for="nome" class="form-label">Nome</label>
+                                <input type="text" class="form-control" id="nome" name="nome" placeholder="Digite seu nome">
+                            </div>
+                            <div class="mb-3">
+                                <label for="senha" class="form-label">Senha</label>
+                                <input type="password" class="form-control" id="senha" name="senha" placeholder="Digite sua senha">
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Entrar</button>
+                        </form>
+                        {% with messages = get_flashed_messages() %}
+                        {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-danger mt-3" role="alert">
+                            {{ message }}
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                        {% endwith %}
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+{% endblock %}

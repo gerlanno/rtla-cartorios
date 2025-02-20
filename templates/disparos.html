@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-custom text-white">
+                <h3 class="mb-0">Filtros</h3>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('disparos') }}" class="row g-3">
+                    <div class="col-md-1">
+                        <label for="cartorio" class="form-label">Cartório</label>
+                        <select class="form-select" id="cartorio" name="cartorio">
+                            <option value="">Todos</option>
+                            <option value="5" {% if request.args.get('cartorio')=='5' %}selected{% endif %}>5 - Ossian Araripe</option>
+                            <option value="8" {% if request.args.get('cartorio')=='8' %}selected{% endif %}>8 - Aguiar</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <label for="protocolo" class="form-label">Protocolo</label>
+                        <input type="text" class="form-control" id="protocolo" name="protocolo" value="{{ request.args.get('protocolo', '') }}">
+                    </div>
+                    <div class="col-sm">
+                        <label for="documento" class="form-label">Documento</label>
+                        <input type="text" class="form-control" id="documento" name="documento" value="{{ request.args.get('documento', '') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="nome" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="nome" name="nome" value="{{ request.args.get('nome', '') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="telefone" class="form-label">Telefone</label>
+                        <input type="text" class="form-control" id="telefone" name="telefone" value="{{ request.args.get('telefone', '') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="data_inicio" class="form-label">Data Inicio</label>
+                        <input type="date" class="form-control" id="data_inicio" name="data_inicio" value="{{ request.args.get('data_inicio', '') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="data_fim" class="form-label">Data Fim</label>
+                        <input type="date" class="form-control" id="data_fim" name="data_fim" value="{{ request.args.get('data_fim', '') }}">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-success me-2">Filtrar</button>
+                        <a href="{{ url_for('disparos') }}" class="btn btn-secondary">Limpar Filtros</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-header bg-custom text-white" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 class="mb-0">Histórico de Disparos</h3>
+                <h6>Total de disparos: {{ total_disparos }}</h6>
+
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Protocolo</th>
+                                <th>Documento</th>
+                                <th>Nome</th>
+                                <th>Telefone</th>
+                                <th>Status</th>
+                                <th>Data/Hora</th>
+
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for message in disparos %}
+                            <tr>
+                                <td>{{ message.protocolo }}</td>
+                                <td>{{ message.documento }}</td>
+                                <td>{{ message.nome }}</td>
+                                <td>{{ message.telefone }}</td>
+                                <td>
+                                    <span class="badge {% if message.status == 'read' %}bg-success-subtle text-success{% elif message.status == 'failed' %}bg-danger-subtle text-danger{% else %}bg-warning-subtle text-warning{% endif %}">
+                                        {% if message.status == 'sent' %}
+                                        Enviado
+                                        {% elif message.status == 'failed' %}
+                                        Falhou
+                                        {% elif message.status == 'delivered' %}
+                                        Entregue
+                                        {% elif message.status == 'read' %}
+                                        Lido
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td>{{ message.data }}</td>
+                                {% if message.reply_details %}
+                                <td>
+                                    <a title="Exibir detalhes" href="#" onclick="showMessages('{{ message.telefone }}')" data-bs-toggle="modal" data-bs-target="#messageModal">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill text-success" viewBox="0 0 16 16">
+                                            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3z" />
+                                        </svg>
+                                    </a>
+                                </td>
+                                {% else %}
+                                <td><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle text-secondary" viewBox="0 0 16 16">
+                                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
+                                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4" />
+                                    </svg></td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <nav aria-label="Navegação das páginas">
+                        <ul class="pagination justify-content-center">
+                            {% if page > 1 %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('disparos', page=page-1) }}">Anterior</a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Anterior</span>
+                            </li>
+                            {% endif %}
+
+                            {% for page_num in range(1, total_pages + 1) %}
+                            {% if page_num > page-5 and page_num < page+5 %} <li class="page-item {% if page_num == page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('disparos', page=page_num, telefone=telefone, data_inicio=data_inicio, data_fim=data_fim, nome=nome, protocolo=protocolo, documento=documento, cartorio=cartorio) }}">{{ page_num }}</a>
+                                </li>
+                                {% endif %}
+                                {% endfor %}
+
+                                {% if page < total_pages %} <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('disparos', page=page+1, telefone=telefone, data_inicio=data_inicio, data_fim=data_fim, nome=nome, protocolo=protocolo, documento=documento, cartorio=cartorio) }}">Próximo</a>
+                                    </li>
+
+                                    {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">Próximo</span>
+                                    </li>
+                                    {% endif %}
+
+                        </ul>
+                        <div class="d-flex justify-content-end">
+                            <p>Total de disparos: {{ total_disparos }}</p>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="messageModalLabel">Mensagens Recebidas</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="messageList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function showMessages(telefone) {
+            fetch(`/get_messages/${telefone}`)
+                .then(response => response.json())
+                .then(messages => {
+                    const messageList = document.getElementById('messageList');
+                    messageList.innerHTML = '';
+
+                    if (messages.length === 0) {
+                        messageList.innerHTML = '<p class="text-center">Nenhuma mensagem encontrada</p>';
+                        return;
+                    }
+
+                    messages.forEach(msg => {
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = 'card mb-2';
+                        messageDiv.innerHTML = `
+                        <div class="card-body">
+                            <p class="card-text">${msg.content || 'Sem conteúdo'}</p>
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">Status: ${msg.status}</small>
+                                <small class="text-muted">${msg.data}</small>
+                            </div>
+                        </div>
+                    `;
+                        messageList.appendChild(messageDiv);
+                    });
+                })
+                .catch(error => {
+                    console.error('Erro ao buscar mensagens:', error);
+                    document.getElementById('messageList').innerHTML = '<p class="text-center text-danger">Erro ao carregar mensagens</p>';
+                });
+        }
+    </script>
+</body>
+
+{% endblock %}
