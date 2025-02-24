@@ -3,7 +3,7 @@ from config import find_token, db_connect
 from utils.logger import Logger
 from datetime import datetime, timedelta
 
-today = datetime.now()
+
 
 
 logger = Logger().get_logger()
@@ -69,6 +69,7 @@ def auto_reply(phone_number_id, reply_to, message_id, message_body):
     Função responsável por responder automaticamente mensagens recebidas.
     """
 
+    today = datetime.now()
     two_days_ago = today - timedelta(days=2)
 
     two_days_ago = two_days_ago.strftime("%Y-%m-%d")
@@ -76,7 +77,7 @@ def auto_reply(phone_number_id, reply_to, message_id, message_body):
 
     params = [reply_to, phone_number_id, "Resposta automática", two_days_ago, today]
     logger.info(params)
-    
+
     try:
         
         pg = db_connect()
