@@ -75,7 +75,8 @@ def auto_reply(phone_number_id, reply_to, message_id, message_body):
     today = today.strftime("%Y-%m-%d")
 
     params = [reply_to, phone_number_id, "Resposta automática", two_days_ago, today]
-    print(params)
+    logger.info(params)
+    
     try:
         
         pg = db_connect()
