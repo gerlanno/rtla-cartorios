@@ -71,6 +71,9 @@ def auto_reply(phone_number_id, reply_to, message_id, message_body):
 
     two_days_ago = today - timedelta(days=2)
 
+    two_days_ago = two_days_ago.strftime("%Y-%m-%d")
+    today = today.strftime("%Y-%m-%d")
+
     params = [reply_to, phone_number_id, "Resposta automática", two_days_ago, today]
 
     try:
@@ -300,10 +303,10 @@ def get_total_disparos(
         query += " AND ze.whatsapp LIKE %s"
         params.append(f"%{telefone}%")
     if data_inicio:
-        query += " AND mh.created_at >= %s"
+        query += " AND ze.datainsert >= %s"
         params.append(data_inicio)
     if data_fim:
-        query += " AND mh.created_at <= %s"
+        query += " AND ze.datainsert <= %s"
         params.append(data_fim)
     if nome:
         query += " AND d.nome ILIKE %s"
@@ -381,7 +384,7 @@ def get_disparos(
                 d.nome,
                 ze.whatsapp as telefone,
                 sp.message_status,
-                TO_CHAR(mh.created_at, 'DD/MM/YYYY HH24:MI:SS') as data
+                TO_CHAR(ze.datainsert, 'DD/MM/YYYY HH24:MI:SS') as data
             FROM zapenviados ze
             LEFT JOIN status_prioridade sp ON sp.messageid = ze.messageid AND sp.prioridade_rank = 1
             LEFT JOIN message_history mh ON mh.message_id = ze.messageid 
@@ -395,10 +398,10 @@ def get_disparos(
             query += " AND ze.whatsapp LIKE %s"
             params.append(f"%{telefone}%")
         if data_inicio:
-            query += " AND mh.created_at >= %s"
+            query += " AND ze.datainsert >= %s"
             params.append(data_inicio)
         if data_fim:
-            query += " AND mh.created_at <= %s"
+            query += " AND ze.datainsert <= %s"
             params.append(data_fim)
         if nome:
             query += " AND d.nome ILIKE %s"
@@ -414,7 +417,7 @@ def get_disparos(
             params.append(cartorio)
         query += f" AND LENGTH(REGEXP_REPLACE(d.documento, '[^0-9]', '', 'g')) = 11"
 
-        query += " ORDER BY mh.created_at DESC"
+        query += " ORDER BY ze.datainsert DESC"
         query += " LIMIT %s OFFSET %s"
         params.extend([ITEMS_PER_PAGE, offset])
 
