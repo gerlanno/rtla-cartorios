@@ -69,14 +69,8 @@ def auto_reply(phone_number_id, reply_to, message_id, message_body):
     Função responsável por responder automaticamente mensagens recebidas.
     """
 
-    #today = datetime.now()
-    #two_days_ago = today - timedelta(days=2)
-
-    #two_days_ago = two_days_ago.strftime("%Y-%m-%d")
-    #today = today.strftime("%Y-%m-%d")
-
     params = [reply_to, phone_number_id, "Resposta automática"]
-    logger.info(params)
+    
 
     try:
         
@@ -105,7 +99,7 @@ def auto_reply(phone_number_id, reply_to, message_id, message_body):
         
     else:
         logger.info(f"Resultado query {resultados}")
-        reply_message = """Olá, Eu sou o 🤖 do Atendimento Virtual do *Instituto de Cartórios de Protestos do Ceará - IEPTBCE*, o seu Assistente Virtual para informações. Caso tenha recebido um alerta, favor entre em contato com nosso SAC no link: https://wa.me/5585982009501 ou acesso nosso site: https://site.ieptbce.com.br"""
+        reply_message = """Olá, Eu sou o 🤖 do Atendimento Virtual do *Instituto de Cartórios de Protestos do Ceará - IEPTBCE*, o seu Assistente Virtual para informações. Caso tenha recebido um alerta, favor entre em contato com nosso SAC nos links: \n\nWhatsapp: https://wa.me/5585982009501 ou acesso nosso site: https://site.ieptbce.com.br"""
 
         whatsapp_token = find_token(phone_number_id)
 
