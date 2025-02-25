@@ -69,13 +69,13 @@ def auto_reply(phone_number_id, reply_to, message_id, message_body):
     Função responsável por responder automaticamente mensagens recebidas.
     """
 
-    today = datetime.now()
-    two_days_ago = today - timedelta(days=2)
+    #today = datetime.now()
+    #two_days_ago = today - timedelta(days=2)
 
-    two_days_ago = two_days_ago.strftime("%Y-%m-%d")
-    today = today.strftime("%Y-%m-%d")
+    #two_days_ago = two_days_ago.strftime("%Y-%m-%d")
+    #today = today.strftime("%Y-%m-%d")
 
-    params = [reply_to, phone_number_id, "Resposta automática", two_days_ago, today]
+    params = [reply_to, phone_number_id, "Resposta automática"]
     logger.info(params)
 
     try:
@@ -87,7 +87,7 @@ def auto_reply(phone_number_id, reply_to, message_id, message_body):
             SELECT 
                count(*)
             FROM message_history 
-            WHERE recipient_id = %s AND sender_id = %s AND message_content = %s AND created_at BETWEEN %s AND %s
+            WHERE recipient_id = %s AND sender_id = %s AND message_content = %s AND created_at BETWEEN NOW() - INTERVAL '2 days' AND NOW();
                 """
 
         cursor.execute(query, params)
