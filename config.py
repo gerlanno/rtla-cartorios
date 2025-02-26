@@ -103,12 +103,6 @@ def find_token(phone_number_id):
     return token_found if token_found else print("Token não localizado")
 
 
-class Config:
-    DEBUG = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///users.db'
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-
-
 
 class ConexaoDB:
     def __init__(self, db_host, db_name, db_user, db_pass):

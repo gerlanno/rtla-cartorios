@@ -24,6 +24,16 @@
                                 <label for="senha" class="form-label">Senha</label>
                                 <input type="password" class="form-control" id="senha" name="senha" placeholder="Digite a senha" required>
                             </div>
+                            <div class="mb-3">
+                                <label for="cartorio" class="form-label">Cartórios</label>
+                                <select class="form-select" id="cartorio" name="cartorio">
+                                    <option value="">Todos</option>
+                                    <option value="5">5 - Ossian Araripe</option>
+                                    <option value="8">8 - Aguiar</option>
+                                </select>
+
+                            </div>
+
                             <button type="submit" class="btn btn-primary w-100">Registrar</button>
                         </form>
                         {% with messages = get_flashed_messages(with_categories=true) %}

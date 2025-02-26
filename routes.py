@@ -1,5 +1,6 @@
 import csv
 import os
+from urllib import response
 from sqlalchemy.exc import IntegrityError
 from flask import (
     flash,
@@ -67,6 +68,12 @@ def setup_routes(app, db):
         """
         Recebe os disparos da API
         """
+        if current_user.cartorio_id:
+            cartorio_user = current_user.cartorio_id
+           
+        else:
+            cartorio_user = None
+
         if request.method == "GET":
             telefone = request.args.get("telefone", None)
             data_inicio = request.args.get("data_inicio", None)
@@ -74,7 +81,10 @@ def setup_routes(app, db):
             nome = request.args.get("nome", None)
             protocolo = request.args.get("protocolo", None)
             documento = request.args.get("documento", None)
-            cartorio = request.args.get("cartorio", None)
+            if current_user.is_admin:
+                cartorio = request.args.get("cartorio", None)
+            else:
+                cartorio = cartorio_user
             page = request.args.get("page", 1, type=int)
             disparos = get_disparos(
                 page,
@@ -122,12 +132,14 @@ def setup_routes(app, db):
             return redirect(url_for("disparos"))
 
         if request.method == "GET":
-            return render_template("registro.html")
+            cartorios = get_cartorios()
+            return render_template("registro.html", cartorios=cartorios)
 
         if request.method == "POST":
             email = request.form.get("email")
             senha = request.form.get("senha")
             nome = request.form.get("nome")
+            cartorio = request.form.get("cartorio")
 
             # Validações básicas
             if not email or not senha or not nome:
@@ -144,6 +156,7 @@ def setup_routes(app, db):
                 email=email,
                 nome=nome,
                 is_admin=False,  # Garante que novos usuários não são admin
+                cartorio_id=int(cartorio),
             )
             novo_usuario.set_senha(senha)
 

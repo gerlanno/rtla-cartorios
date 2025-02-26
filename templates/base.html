@@ -86,26 +86,35 @@
 <header class="header">
     <div class="container">
         <div class="header-content">
-            <a href="{{ url_for('disparos') }}" class="logo"><img src="static/rtla1.png" class="rounded float-start"
-                    alt="logo rtla"></a>
-            <nav class="nav-menu">
-                {% if current_user.is_admin %}
-                <a href="{{ url_for('registro') }}" class="nav-link">
-                    <i class="fas fa-user-plus"></i>
-                    Cadastrar Usuário
-                </a>
-                {% endif %}
-                {% if current_user.is_authenticated %}
-                <a href="{{ url_for('disparos') }}" class="nav-link">
-                    <i class="fas fa-user-plus"></i>
-                    Disparos
-                </a>
-                <a href="{{ url_for('logout') }}" class="nav-link">
-                    <i class="fas fa-sign-out-alt"></i>
-                    Sair
-                </a>
-
-                {% endif %}
+            <a href="{{ url_for('disparos') }}" class="logo"><img src="static/rtla1.png" class="rounded float-start" alt="logo rtla"></a>
+            <nav class="nav nav-pills flex-column flex-sm-row">
+                <ul class="nav justify-content-end">
+                    <li class="nav-item">
+                        <a class="flex-sm-fill text-sm-center nav-link disabled" href="#" tabindex="-1" aria-disabled="true">Bem vindo, {{ current_user.nome }}</a>
+                    </li>
+                    {% if current_user.is_admin %}
+                    <li class="nav-item">
+                        <a href="{{ url_for('registro') }}" class="nav-link">
+                            <i class="fas fa-user-plus"></i>
+                            Cadastrar Usuário
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a href="{{ url_for('disparos') }}" class="nav-link">
+                            <i class="fas fa-user-plus"></i>
+                            Disparos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('logout') }}" class="nav-link">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Sair
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
             </nav>
         </div>
     </div>

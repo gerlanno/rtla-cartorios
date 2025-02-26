@@ -4,8 +4,6 @@ from utils.logger import Logger
 from datetime import datetime, timedelta
 
 
-
-
 logger = Logger().get_logger()
 
 
@@ -70,10 +68,9 @@ def auto_reply(phone_number_id, reply_to, message_id, message_body):
     """
 
     params = [reply_to, phone_number_id, "Resposta automática"]
-    
 
     try:
-        
+
         pg = db_connect()
         pg.conectar()
         cursor = pg.conn.cursor()
@@ -86,20 +83,19 @@ def auto_reply(phone_number_id, reply_to, message_id, message_body):
 
         cursor.execute(query, params)
         resultados = cursor.fetchall()
-        
+
         pg.desconectar()
-       
 
     except Exception as e:
         logger.error(f"Erro - {e}")
 
     if resultados[0][0] > 0:
-        
-        logger.info(f"Resposta automática já enviada: {message_id}")      
-        
+
+        logger.info(f"Resposta automática já enviada: {message_id}")
+
     else:
         logger.info(f"Resultado query {resultados}")
-        reply_message = """Olá, Eu sou o 🤖 do Atendimento Virtual do *Instituto de Cartórios de Protestos do Ceará - IEPTBCE*, o seu Assistente Virtual para informações. Caso tenha recebido um alerta, favor entre em contato com nosso SAC nos links: \n\nWhatsapp: https://wa.me/5585982009501 ou acesso nosso site: https://site.ieptbce.com.br"""
+        reply_message = """Olá, Eu sou o 🤖 do Atendimento Virtual do *Instituto de Cartórios de Protestos do Ceará - IEPTBCE*, o seu Assistente Virtual para informações. Caso tenha recebido um alerta, favor entre em contato com nosso SAC nos links: \n\nWhatsapp: https://wa.me/5585982009501 \nOu acesse nosso site: https://site.ieptbce.com.br"""
 
         whatsapp_token = find_token(phone_number_id)
 
@@ -121,7 +117,7 @@ def auto_reply(phone_number_id, reply_to, message_id, message_body):
         }
 
         # Enviar a solicitação POST
-        
+
         response = requests.post(api_url, headers=headers, json=data)
 
         logger.info(f"Auto reply: {response.status_code}, {response.text}")
@@ -135,12 +131,13 @@ def auto_reply(phone_number_id, reply_to, message_id, message_body):
                     message_status = (
                         data.get("message_status") if data.get("message_status") else ""
                     )
-            autoreply_history(message_sended_id, phone_number_id, reply_to, message_status)            
-       
+            autoreply_history(
+                message_sended_id, phone_number_id, reply_to, message_status
+            )
+
     message_received(
         message_id, reply_to, phone_number_id, "received", message_content=message_body
     )
-
 
 
 def autoreply_history(message_id, phone_number_id, recipient, message_status):
@@ -240,7 +237,6 @@ def message_received(
                             VALUES (%s, %s, %s,%s,%s);"""
 
         vars = (message_id, sender_id, recipient_id, message_content, message_status)
-       
 
         cursor.execute(query, vars)
         pg.conn.commit()
@@ -281,6 +277,7 @@ def get_total_disparos(
                 ) as prioridade_rank
             FROM zapenviados ze
             LEFT JOIN message_history mh ON mh.message_id = ze.messageid
+            
         )
         SELECT COUNT(DISTINCT ze.messageid)
         FROM zapenviados ze
@@ -316,6 +313,8 @@ def get_total_disparos(
     if cartorio:
         query += " AND t.cartorio_id = %s"
         params.append(cartorio)
+
+    query += " AND mh.message_status <> 'failed'"
 
     try:
         pg = db_connect()
@@ -373,6 +372,7 @@ def get_disparos(
                     ) as prioridade_rank
                 FROM zapenviados ze
                 LEFT JOIN message_history mh ON mh.message_id = ze.messageid
+                
             )
             SELECT 
                 t.protocolo,
@@ -411,10 +411,13 @@ def get_disparos(
         if cartorio:
             query += " AND t.cartorio_id = %s"
             params.append(cartorio)
+
+        query += " AND mh.message_status <> 'failed'"
         query += f" AND LENGTH(REGEXP_REPLACE(d.documento, '[^0-9]', '', 'g')) = 11"
 
         query += " ORDER BY ze.datainsert DESC"
         query += " LIMIT %s OFFSET %s"
+
         params.extend([ITEMS_PER_PAGE, offset])
 
         cursor.execute(query, params)
@@ -481,3 +484,23 @@ def check_exists_reply(sender_id):
         logger.error(f"Erro ao buscar detalhes da mensagem: {e}")
         return []
 
+
+def get_cartorios():
+    """
+    Retorna uma lista com todos os cartórios cadastrados
+    """
+    try:
+        pg = db_connect()
+        pg.conectar()
+        cursor = pg.conn.cursor()
+        query = """
+            SELECT id, nome FROM cartorio
+        """
+        cursor.execute(query)
+        results = cursor.fetchall()
+        return results
+    except Exception as e:
+        logger.error(f"Erro ao buscar cartórios: {e}")
+        return []
+    finally:
+        pg.desconectar()

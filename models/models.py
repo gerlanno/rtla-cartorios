@@ -8,6 +8,7 @@ class Usuario(UserMixin, db.Model):
     senha_hash = db.Column(db.String(128))
     nome = db.Column(db.String(80))
     is_admin = db.Column(db.Boolean, default=False)
+    cartorio_id = db.Column(db.Integer, nullable=True)
 
     def set_senha(self, senha):
         self.senha_hash = generate_password_hash(senha)

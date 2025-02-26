@@ -10,14 +10,20 @@
             </div>
             <div class="card-body">
                 <form method="GET" action="{{ url_for('disparos') }}" class="row g-3">
+                    {% if current_user.is_admin %}
                     <div class="col-md-1">
+
                         <label for="cartorio" class="form-label">Cartório</label>
                         <select class="form-select" id="cartorio" name="cartorio">
+
                             <option value="">Todos</option>
                             <option value="5" {% if request.args.get('cartorio')=='5' %}selected{% endif %}>5 - Ossian Araripe</option>
                             <option value="8" {% if request.args.get('cartorio')=='8' %}selected{% endif %}>8 - Aguiar</option>
+
+
                         </select>
                     </div>
+                    {% endif %}
                     <div class="col-md-1">
                         <label for="protocolo" class="form-label">Protocolo</label>
                         <input type="text" class="form-control" id="protocolo" name="protocolo" value="{{ request.args.get('protocolo', '') }}">
@@ -112,6 +118,7 @@
 
                     <nav aria-label="Navegação das páginas">
                         <ul class="pagination justify-content-center">
+
                             {% if page > 1 %}
                             <li class="page-item">
                                 <a class="page-link" href="{{ url_for('disparos', page=page-1) }}">Anterior</a>
@@ -124,13 +131,13 @@
 
                             {% for page_num in range(1, total_pages + 1) %}
                             {% if page_num > page-5 and page_num < page+5 %} <li class="page-item {% if page_num == page %}active{% endif %}">
-                                <a class="page-link" href="{{ url_for('disparos', page=page_num, telefone=telefone, data_inicio=data_inicio, data_fim=data_fim, nome=nome, protocolo=protocolo, documento=documento, cartorio=cartorio) }}">{{ page_num }}</a>
+                                <a class="page-link" href="{{ url_for('disparos', page=page_num, telefone=telefone, data_inicio=data_inicio, data_fim=data_fim, nome=nome, protocolo=protocolo, documento=documento, cartorio=current_user.cartorio_id if current_user.cartorio_id else cartorio) }}">{{ page_num }}</a>
                                 </li>
                                 {% endif %}
                                 {% endfor %}
 
                                 {% if page < total_pages %} <li class="page-item">
-                                    <a class="page-link" href="{{ url_for('disparos', page=page+1, telefone=telefone, data_inicio=data_inicio, data_fim=data_fim, nome=nome, protocolo=protocolo, documento=documento, cartorio=cartorio) }}">Próximo</a>
+                                    <a class="page-link" href="{{ url_for('disparos', page=page+1, telefone=telefone, data_inicio=data_inicio, data_fim=data_fim, nome=nome, protocolo=protocolo, documento=documento, cartorio=current_user.cartorio_id if current_user.cartorio_id else cartorio) }}">Próximo</a>
                                     </li>
 
                                     {% else %}
