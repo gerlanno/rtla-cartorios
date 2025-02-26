@@ -477,12 +477,19 @@ def check_exists_reply(sender_id):
             messages = []
             for row in results:
                 messages.append({"content": row[0], "status": row[1], "data": row[2]})
+                
+            pg.desconectar()    
             return messages
+        
+        pg.desconectar()
         return []
+    
 
     except Exception as e:
         logger.error(f"Erro ao buscar detalhes da mensagem: {e}")
         return []
+    finally:
+        pg.desconectar()
 
 
 def get_cartorios():
