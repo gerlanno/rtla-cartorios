@@ -1,8 +1,10 @@
+import stat
+from flask import jsonify
 import requests
 from config import find_token, db_connect
 from utils.logger import Logger
 from datetime import datetime, timedelta
-
+import time
 
 logger = Logger().get_logger()
 
@@ -247,7 +249,7 @@ def message_received(
     pg.desconectar()
 
 
-def get_total_disparos(
+def get_total_disparos(    
     telefone=None,
     data_inicio=None,
     data_fim=None,
@@ -256,6 +258,7 @@ def get_total_disparos(
     documento=None,
     cartorio=None,
 ):
+   
     """Conta o total de disparos para calcular páginas."""
 
     query = """
@@ -270,14 +273,13 @@ def get_total_disparos(
                             WHEN 'read' THEN 1
                             WHEN 'delivered' THEN 2
                             WHEN 'sent' THEN 3
-                            WHEN 'pending' THEN 4
-                            WHEN 'failed' THEN 5
-                            ELSE 6
+                            WHEN 'pending' THEN 4                           
+                            ELSE 5
                         END
                 ) as prioridade_rank
             FROM zapenviados ze
             LEFT JOIN message_history mh ON mh.message_id = ze.messageid
-            
+            WHERE mh.message_status <> 'failed'
         )
         SELECT COUNT(DISTINCT ze.messageid)
         FROM zapenviados ze
@@ -314,7 +316,7 @@ def get_total_disparos(
         query += " AND t.cartorio_id = %s"
         params.append(cartorio)
 
-    query += " AND mh.message_status <> 'failed'"
+    #query += " AND mh.message_status <> 'failed'"
 
     try:
         pg = db_connect()
@@ -331,7 +333,7 @@ def get_total_disparos(
     return total
 
 
-def get_disparos(
+def get_disparos(    
     page=1,
     ITEMS_PER_PAGE=10,
     telefone=None,
@@ -345,6 +347,9 @@ def get_disparos(
     """
     Retorna uma lista com o histórico de disparos realizados incluindo informações do protocolo
     """
+
+  
+
     params = []
     offset = (page - 1) * ITEMS_PER_PAGE
 
@@ -365,14 +370,13 @@ def get_disparos(
                                 WHEN 'read' THEN 1
                                 WHEN 'delivered' THEN 2
                                 WHEN 'sent' THEN 3
-                                WHEN 'pending' THEN 4
-                                WHEN 'failed' THEN 5
-                                ELSE 6
+                                WHEN 'pending' THEN 4                                
+                                ELSE 5
                             END
                     ) as prioridade_rank
                 FROM zapenviados ze
                 LEFT JOIN message_history mh ON mh.message_id = ze.messageid
-                
+                WHERE mh.message_id <> 'failed'
             )
             SELECT 
                 t.protocolo,
@@ -419,15 +423,18 @@ def get_disparos(
         query += " LIMIT %s OFFSET %s"
 
         params.extend([ITEMS_PER_PAGE, offset])
-
+        
         cursor.execute(query, params)
 
         results = cursor.fetchall()
-
+        
+        
+        start = time.time()
         message_list = []
         for row in results:
             reply_details = check_exists_reply(row[3])
 
+            
             message = {
                 "protocolo": row[0] or "",
                 "documento": row[1] or "",

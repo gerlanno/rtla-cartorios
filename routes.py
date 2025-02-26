@@ -1,6 +1,6 @@
+import time
 import csv
 import os
-from urllib import response
 from sqlalchemy.exc import IntegrityError
 from flask import (
     flash,
@@ -70,11 +70,12 @@ def setup_routes(app, db):
         """
         if current_user.cartorio_id:
             cartorio_user = current_user.cartorio_id
-           
+
         else:
             cartorio_user = None
 
         if request.method == "GET":
+
             telefone = request.args.get("telefone", None)
             data_inicio = request.args.get("data_inicio", None)
             data_fim = request.args.get("data_fim", None)
@@ -86,6 +87,7 @@ def setup_routes(app, db):
             else:
                 cartorio = cartorio_user
             page = request.args.get("page", 1, type=int)
+
             disparos = get_disparos(
                 page,
                 ITEMS_PER_PAGE,
@@ -97,9 +99,11 @@ def setup_routes(app, db):
                 documento,
                 cartorio,
             )
+
             total_disparos = get_total_disparos(
                 telefone, data_inicio, data_fim, nome, protocolo, documento, cartorio
             )
+
             total_pages = (
                 total_disparos + ITEMS_PER_PAGE - 1
             ) // ITEMS_PER_PAGE  # Arredondando para cima
