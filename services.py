@@ -1,3 +1,4 @@
+from fileinput import filename
 import stat
 from flask import jsonify
 import requests
@@ -5,6 +6,11 @@ from config import find_token, db_connect
 from utils.logger import Logger
 from datetime import datetime, timedelta
 import time
+import csv
+import os
+
+
+today = datetime.now()
 
 logger = Logger().get_logger()
 
@@ -249,7 +255,7 @@ def message_received(
     pg.desconectar()
 
 
-def get_total_disparos(    
+def get_total_disparos(
     telefone=None,
     data_inicio=None,
     data_fim=None,
@@ -258,7 +264,6 @@ def get_total_disparos(
     documento=None,
     cartorio=None,
 ):
-   
     """Conta o total de disparos para calcular páginas."""
 
     query = """
@@ -316,7 +321,7 @@ def get_total_disparos(
         query += " AND t.cartorio_id = %s"
         params.append(cartorio)
 
-    #query += " AND mh.message_status <> 'failed'"
+    # query += " AND mh.message_status <> 'failed'"
 
     try:
         pg = db_connect()
@@ -333,7 +338,7 @@ def get_total_disparos(
     return total
 
 
-def get_disparos(    
+def get_disparos(
     page=1,
     ITEMS_PER_PAGE=10,
     telefone=None,
@@ -343,15 +348,13 @@ def get_disparos(
     protocolo=None,
     documento=None,
     cartorio=None,
+    save_results=False,
 ):
     """
     Retorna uma lista com o histórico de disparos realizados incluindo informações do protocolo
     """
 
-  
-
     params = []
-    offset = (page - 1) * ITEMS_PER_PAGE
 
     try:
         pg = db_connect()
@@ -420,21 +423,22 @@ def get_disparos(
         query += f" AND LENGTH(REGEXP_REPLACE(d.documento, '[^0-9]', '', 'g')) = 11"
 
         query += " ORDER BY ze.datainsert DESC"
-        query += " LIMIT %s OFFSET %s"
 
-        params.extend([ITEMS_PER_PAGE, offset])
-        
+        if not save_results:
+
+            offset = (page - 1) * ITEMS_PER_PAGE
+            query += " LIMIT %s OFFSET %s"
+
+            params.extend([ITEMS_PER_PAGE, offset])
+
         cursor.execute(query, params)
 
         results = cursor.fetchall()
-        
-        
-        start = time.time()
+
         message_list = []
         for row in results:
             reply_details = check_exists_reply(row[3])
 
-            
             message = {
                 "protocolo": row[0] or "",
                 "documento": row[1] or "",
@@ -484,13 +488,12 @@ def check_exists_reply(sender_id):
             messages = []
             for row in results:
                 messages.append({"content": row[0], "status": row[1], "data": row[2]})
-                
-            pg.desconectar()    
+
+            pg.desconectar()
             return messages
-        
+
         pg.desconectar()
         return []
-    
 
     except Exception as e:
         logger.error(f"Erro ao buscar detalhes da mensagem: {e}")
@@ -518,3 +521,136 @@ def get_cartorios():
         return []
     finally:
         pg.desconectar()
+
+
+def export_to_file(
+    telefone=None,
+    data_inicio=None,
+    data_fim=None,
+    nome=None,
+    protocolo=None,
+    documento=None,
+    cartorio=None,
+):
+
+    params = []
+
+    try:
+        pg = db_connect()
+        pg.conectar()
+        cursor = pg.conn.cursor()
+
+        query = f"""
+                WITH status_prioridade AS (
+                    SELECT 
+                        ze.messageid,
+                        mh.message_status,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY ze.messageid
+                            ORDER BY 
+                                CASE mh.message_status
+                                    WHEN 'read' THEN 1
+                                    WHEN 'delivered' THEN 2
+                                    WHEN 'sent' THEN 3
+                                    WHEN 'pending' THEN 4                                
+                                    ELSE 5
+                                END
+                        ) as prioridade_rank
+                    FROM zapenviados ze
+                    LEFT JOIN message_history mh ON mh.message_id = ze.messageid
+                    WHERE mh.message_id <> 'failed'
+                )
+                SELECT 
+                    t.protocolo,
+                    d.documento,
+                    d.nome,
+                    ze.whatsapp as telefone,
+                    sp.message_status,
+                    TO_CHAR(ze.datainsert, 'DD/MM/YYYY HH24:MI:SS') as data
+                FROM zapenviados ze
+                LEFT JOIN status_prioridade sp ON sp.messageid = ze.messageid AND sp.prioridade_rank = 1
+                LEFT JOIN message_history mh ON mh.message_id = ze.messageid 
+                    AND mh.message_status = sp.message_status
+                LEFT JOIN titulos t ON t.id = ze.titulo_id
+                LEFT JOIN devedores d ON d.titulo_id = t.id
+                WHERE 1=1          
+            """
+
+        if telefone:
+            query += " AND ze.whatsapp LIKE %s"
+            params.append(f"%{telefone}%")
+        if data_inicio:
+            query += " AND ze.datainsert >= %s"
+            params.append(data_inicio)
+        if data_fim:
+            query += " AND ze.datainsert <= %s"
+            params.append(data_fim)
+        if nome:
+            query += " AND d.nome ILIKE %s"
+            params.append(f"%{nome}%")
+        if protocolo:
+            query += " AND t.protocolo = %s"
+            params.append(protocolo)
+        if documento:
+            query += " AND d.documento = %s"
+            params.append(documento)
+        if cartorio:
+            query += " AND t.cartorio_id = %s"
+            params.append(cartorio)
+
+        query += " AND mh.message_status <> 'failed'"
+        query += f" AND LENGTH(REGEXP_REPLACE(d.documento, '[^0-9]', '', 'g')) = 11"
+
+        query += " ORDER BY ze.datainsert DESC"
+
+        cursor.execute(query, params)
+
+        results = cursor.fetchall()
+
+        message_list = []
+        for row in results:
+
+            message = {
+                "protocolo": row[0] or "",
+                "documento": row[1] or "",
+                "nome": row[2] or "",
+                "telefone": row[3] or "",
+                "status": row[4] or "",
+                "data": row[5] or "",
+            }
+
+            message_list.append(message)
+
+        output = salvar_csv(message_list)
+        return output
+    except Exception as e:
+        logger.error(f"Erro ao buscar histórico de mensagens: {e}")
+        return []
+
+    finally:
+        pg.desconectar()
+
+
+def salvar_csv(message_list):
+    """Salva os dados da message_list em um arquivo CSV."""
+
+    FILES_DIR = "files"
+    filename = f"Export-{today.strftime("%d%m%Y-%H%M%S")}.csv"
+
+    if not message_list:
+        logger.info("Nada para salvar.")
+        return
+
+    cabecalhos = ["protocolo", "documento", "nome", "telefone", "status", "data"]
+
+    with open(
+        os.path.join(FILES_DIR, filename), mode="w", newline="", encoding="utf-8"
+    ) as arquivo_csv:
+        writer = csv.DictWriter(arquivo_csv, fieldnames=cabecalhos)
+        writer.writeheader()
+        writer.writerows(message_list)
+
+    return {"file_dir": FILES_DIR, "filename": filename}
+
+
+

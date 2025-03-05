@@ -89,9 +89,11 @@
             <a href="{{ url_for('disparos') }}" class="logo"><img src="static/rtla1.png" class="rounded float-start" alt="logo rtla"></a>
             <nav class="nav nav-pills flex-column flex-sm-row">
                 <ul class="nav justify-content-end">
+                    {% if current_user.is_authenticated %}
                     <li class="nav-item">
                         <a class="flex-sm-fill text-sm-center nav-link disabled" href="#" tabindex="-1" aria-disabled="true">Bem vindo, {{ current_user.nome }}</a>
                     </li>
+                    {% endif %}
                     {% if current_user.is_admin %}
                     <li class="nav-item">
                         <a href="{{ url_for('registro') }}" class="nav-link">

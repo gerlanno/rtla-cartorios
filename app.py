@@ -1,3 +1,4 @@
+from re import DEBUG
 from flask import Flask
 from extensions import db, login_manager, migrate
 from cli import init_cli

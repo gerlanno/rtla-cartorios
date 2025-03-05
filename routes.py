@@ -11,6 +11,7 @@ from flask import (
     url_for,
     Flask,
     session,
+    send_from_directory
 )
 from flask_login import (
     LoginManager,
@@ -123,6 +124,58 @@ def setup_routes(app, db):
                 cartorio=cartorio,
             )
         return "<h1>Bad Request</h1>", 400
+
+
+    @app.route("/salvar-resultados", methods=["GET", "POST"])
+    @login_required
+    def salvar_resultados():
+
+        if current_user.cartorio_id:
+            cartorio_user = current_user.cartorio_id
+
+        else:
+            cartorio_user = None
+
+        if request.method == "GET":
+
+            telefone = request.args.get("telefone", None)
+            data_inicio = request.args.get("data_inicio", None)
+            data_fim = request.args.get("data_fim", None)
+            nome = request.args.get("nome", None)
+            protocolo = request.args.get("protocolo", None)
+            documento = request.args.get("documento", None)
+            if current_user.is_admin:
+                cartorio = request.args.get("cartorio", None)
+            else:
+                cartorio = cartorio_user
+            
+
+           
+            disparos = export_to_file(
+                telefone=telefone,
+                data_inicio=data_inicio,
+                data_fim=data_fim,
+                nome=nome,
+                protocolo=protocolo,
+                documento=documento,
+                cartorio=cartorio
+         
+            )
+        print(disparos)
+        if disparos:
+            directory = disparos.get('files_dir')
+            file = disparos.get('filename')
+
+            return redirect(url_for('download_file', nome_do_arquivo=file))
+        
+        else:
+            return redirect(location=url_for("disparos"))
+        
+    @app.route("/arquivos/<nome_do_arquivo>", methods=["GET"])
+    def download_file(nome_do_arquivo):
+        FILES_DIR = 'files'
+
+        return send_from_directory(FILES_DIR, nome_do_arquivo, as_attachment=True)
 
     @app.route("/registro", methods=["GET", "POST"])
     @login_required

@@ -1,6 +1,21 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }} d-flex align-items-center alert-dismissible fade show" role="alert">
+    <svg class="bi flex-shrink-0 me-2" width="24" height="24" role="img" aria-label="{{ category }}:">
+        <use xlink:href="#check-circle-fill" />
+    </svg>
+    <div>
+        {{ message }}
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
 
 <body class="bg-light">
     <div class="container mt-5">
@@ -48,8 +63,11 @@
                         <label for="data_fim" class="form-label">Data Fim</label>
                         <input type="date" class="form-control" id="data_fim" name="data_fim" value="{{ request.args.get('data_fim', '') }}">
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-success me-2">Filtrar</button>
+                    <div class="col-md-2 d-flex">
+                        <button type="submit" class="btn btn-success me-3">Filtrar</button>
+
+                        <a id="btnExportarCSV" class="btn btn-primary me-3" href="{{ url_for('salvar_resultados', telefone=telefone, data_inicio=data_inicio, data_fim=data_fim, nome=nome, protocolo=protocolo, documento=documento, cartorio=current_user.cartorio_id if current_user.cartorio_id else cartorio) }}">Exportar CSV</a>
+
                         <a href="{{ url_for('disparos') }}" class="btn btn-secondary">Limpar Filtros</a>
                     </div>
                 </form>
