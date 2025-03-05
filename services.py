@@ -635,7 +635,7 @@ def salvar_csv(message_list):
     """Salva os dados da message_list em um arquivo CSV."""
 
     FILES_DIR = "files"
-    filename = f"Export-{today.strftime("%d%m%Y-%H%M%S")}.csv"
+    filename = f"Export-{today.strftime('%d%m%Y-%H%M%S')}.csv"
 
     if not message_list:
         logger.info("Nada para salvar.")
