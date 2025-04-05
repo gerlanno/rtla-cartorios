@@ -22,7 +22,8 @@ db_config = {
     "password": os.getenv("DB_PG_PASS"),
 }
 
-
+FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
+USERS_DB = os.getenv("USERS_DB")
 
 wa_config = {
     "OSIAN1": {

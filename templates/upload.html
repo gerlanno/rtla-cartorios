@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-danger mt-3" role="alert">
+    {{ message }}
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card shadow">
+                    <div class="card-header bg-custom text-white">
+                        <h2 class="mb-0 text-center">Enviar Arquivo para Importação</h2>
+                    </div>
+                    <div class="card-body">
+
+                        {% if message %}
+
+                        <h5 class="card-title">{{ message.get('message') }}</h5>
+                        <p class="card-text">Nome do arquivo: <span class="badge bg-secondary">{{ message.get('filename') }}<span></p>
+
+                        <form action="{{ url_for('agendar', import=true, filename=message.get('filename')) }}" method="POST">
+
+                         
+                            Data dos disparos: <p><input type="date" name="dataAgendamento" id="dataInput" title="Escolha uma data a partir de amanhã"></p>
+
+                            <button type="submit" class="btn btn-outline-primary">Confirmar agendamento</button>
+                            <a href="{{ url_for('importar_arquivo', import=false, filename=message.get('filename')) }}" class="btn btn-outline-danger">Cancelar Importação</a>
+                        </form>
+                                             
+                       
+
+                        {% else %}
+
+
+                        <form action="{{ url_for('upload_file') }}" method="POST" enctype="multipart/form-data">
+
+                            <div class="input-group mb-3">
+                                <input type="file" class="form-control" id="xmlfile" name="xmlfile" accept=".xml" required>
+                                
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Upload</button>
+                        </form>
+
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js">
+    </script>
+    <script>
+        // Define o mínimo como amanhã no carregamento da página
+        window.onload = function () {
+            const dataInput = document.getElementById('dataInput');
+            const hoje = new Date();
+            const amanha = new Date(hoje);
+            amanha.setDate(hoje.getDate() + 1);
+            // Formato YYYY-MM-DD (exigido pelo input date)
+            const amanhaFormatado = amanha.toISOString().split('T')[0];
+            dataInput.setAttribute('min', amanhaFormatado);
+            dataInput.value = amanhaFormatado
+        };
+    </script>
+
+    <div id="showAgendamento"></div>
+</body>
+{% endblock %}

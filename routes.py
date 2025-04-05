@@ -1,7 +1,8 @@
-import time
 import csv
 import os
+from datetime import datetime
 from sqlalchemy.exc import IntegrityError
+from werkzeug.utils import secure_filename
 from flask import (
     flash,
     redirect,
@@ -11,7 +12,7 @@ from flask import (
     url_for,
     Flask,
     session,
-    send_from_directory
+    send_from_directory,
 )
 from flask_login import (
     LoginManager,
@@ -22,8 +23,8 @@ from flask_login import (
 )
 from models.models import Usuario
 from services import *
-
 from utils.logger import Logger
+
 
 logger = Logger().get_logger()
 
@@ -125,7 +126,6 @@ def setup_routes(app, db):
             )
         return "<h1>Bad Request</h1>", 400
 
-
     @app.route("/salvar-resultados", methods=["GET", "POST"])
     @login_required
     def salvar_resultados():
@@ -148,9 +148,7 @@ def setup_routes(app, db):
                 cartorio = request.args.get("cartorio", None)
             else:
                 cartorio = cartorio_user
-            
 
-           
             disparos = export_to_file(
                 telefone=telefone,
                 data_inicio=data_inicio,
@@ -158,22 +156,21 @@ def setup_routes(app, db):
                 nome=nome,
                 protocolo=protocolo,
                 documento=documento,
-                cartorio=cartorio
-         
+                cartorio=cartorio,
             )
-        print(disparos)
-        if disparos:
-            directory = disparos.get('files_dir')
-            file = disparos.get('filename')
 
-            return redirect(url_for('download_file', nome_do_arquivo=file))
-        
+        if disparos:
+            directory = disparos.get("files_dir")
+            file = disparos.get("filename")
+
+            return redirect(url_for("download_file", nome_do_arquivo=file))
+
         else:
             return redirect(location=url_for("disparos"))
-        
+
     @app.route("/arquivos/<nome_do_arquivo>", methods=["GET"])
     def download_file(nome_do_arquivo):
-        FILES_DIR = 'files'
+        FILES_DIR = "files"
 
         return send_from_directory(FILES_DIR, nome_do_arquivo, as_attachment=True)
 
@@ -271,3 +268,75 @@ def setup_routes(app, db):
     def get_messages(telefone):
         messages = check_exists_reply(telefone)
         return jsonify(messages)
+
+    @app.route("/upload", methods=["POST", "GET"])
+    @login_required
+    def upload_file():
+
+        upload_fold = "files"
+
+        if request.method == "POST":
+
+            if "xmlfile" not in request.files:
+
+                return jsonify({"error": "Nenhum arquivo enviado"})
+
+            file = request.files["xmlfile"]
+            
+            if file.filename == "" or "CartaCancelamento" not in file.filename:
+
+                flash(
+                    "Nome do arquivo inválido, selecione um arquivo de Cancelamentos.",
+                    category="danger",
+                )
+                return redirect(url_for("upload_file"))
+
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+                file.save(file_path)
+                message = {
+                    "message": "Upload realizado com sucesso",
+                    "filename": filename,
+                }
+                return render_template("upload.html", message=message), 200
+
+        return render_template("upload.html")
+
+    @app.route("/agendar", methods=["GET", "POST"])
+    @login_required
+    def agendar():
+
+        if request.method == "GET":
+
+            if request.args.get("import") == "False":
+                status = delete_xml(request.args.get("filename"))
+                if status.get("sucess"):
+                    flash(message="Importação cancelada", category="info")
+                    return redirect(url_for("disparos"))
+
+            if request.args.get("import") == "True":
+                status = importar_xml()
+                if status.get("sucess"):
+                    flash(message="Importação concluída", category="sucess")
+                    return redirect(url_for("disparos"))
+                else:
+                    flash(message="Falha na importação", category="danger")
+                    return redirect(url_for("disparos"))
+                
+
+        elif request.method == "POST":
+
+            agendamento = str(request.form.get('dataAgendamento')).replace('T', ' ')
+            arquivo = str(request.args.get("filename"))
+            usuario = current_user.nome
+            cartorio = current_user.cartorio_id
+            print(agendamento, usuario, cartorio, arquivo)
+
+            #CRIAR O ARQUIVO SCHEDULE PARA AGENDAMENTO QUE RECEBERÁ A DATA COMO PARAMETRO
+            
+            #data_hora = datetime.strptime(agendamento, "%Y-%m-%d %H:%M")
+            #print(type(data_hora), data_hora)
+
+            
+        return redirect(url_for("disparos"))

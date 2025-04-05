@@ -8,7 +8,10 @@ from datetime import datetime, timedelta
 import time
 import csv
 import os
+import json
 
+
+BASE_API_URL = 'http://localhost:5001'
 
 today = datetime.now()
 
@@ -286,7 +289,7 @@ def get_total_disparos(
             LEFT JOIN message_history mh ON mh.message_id = ze.messageid
             WHERE mh.message_status <> 'failed'
         )
-        SELECT COUNT(DISTINCT ze.messageid)
+        SELECT COUNT(ze.messageid)
         FROM zapenviados ze
         LEFT JOIN status_prioridade sp ON sp.messageid = ze.messageid AND sp.prioridade_rank = 1
         LEFT JOIN message_history mh ON mh.message_id = ze.messageid 
@@ -294,18 +297,22 @@ def get_total_disparos(
         LEFT JOIN titulos t ON t.id = ze.titulo_id
         LEFT JOIN devedores d ON d.titulo_id = t.id
         WHERE 1=1
+        AND mh.message_status <> 'failed'		
         AND LENGTH(REGEXP_REPLACE(d.documento, '[^0-9]', '', 'g')) = 11
     """
 
     params = []
-
+    
+    
     if telefone:
         query += " AND ze.whatsapp LIKE %s"
         params.append(f"%{telefone}%")
     if data_inicio:
+        data_inicio = f"{data_inicio} 00:00:01"
         query += " AND ze.datainsert >= %s"
         params.append(data_inicio)
     if data_fim:
+        data_fim = f"{data_fim} 23:59:59"
         query += " AND ze.datainsert <= %s"
         params.append(data_fim)
     if nome:
@@ -353,7 +360,7 @@ def get_disparos(
     """
     Retorna uma lista com o histórico de disparos realizados incluindo informações do protocolo
     """
-
+    
     params = []
 
     try:
@@ -379,7 +386,7 @@ def get_disparos(
                     ) as prioridade_rank
                 FROM zapenviados ze
                 LEFT JOIN message_history mh ON mh.message_id = ze.messageid
-                WHERE mh.message_id <> 'failed'
+                WHERE mh.message_status <> 'failed'
             )
             SELECT 
                 t.protocolo,
@@ -396,14 +403,17 @@ def get_disparos(
             LEFT JOIN devedores d ON d.titulo_id = t.id
             WHERE 1=1          
         """
-
+        
+        
         if telefone:
             query += " AND ze.whatsapp LIKE %s"
             params.append(f"%{telefone}%")
         if data_inicio:
+            data_inicio = f"{data_inicio} 00:00:01"
             query += " AND ze.datainsert >= %s"
             params.append(data_inicio)
         if data_fim:
+            data_fim = f"{data_fim} 23:59:59"
             query += " AND ze.datainsert <= %s"
             params.append(data_fim)
         if nome:
@@ -558,7 +568,7 @@ def export_to_file(
                         ) as prioridade_rank
                     FROM zapenviados ze
                     LEFT JOIN message_history mh ON mh.message_id = ze.messageid
-                    WHERE mh.message_id <> 'failed'
+                    WHERE mh.message_status <> 'failed'
                 )
                 SELECT 
                     t.protocolo,
@@ -580,9 +590,11 @@ def export_to_file(
             query += " AND ze.whatsapp LIKE %s"
             params.append(f"%{telefone}%")
         if data_inicio:
+            data_inicio = f"{data_inicio} 00:00:01"
             query += " AND ze.datainsert >= %s"
             params.append(data_inicio)
         if data_fim:
+            data_fim = f"{data_fim} 23:59:59"
             query += " AND ze.datainsert <= %s"
             params.append(data_fim)
         if nome:
@@ -621,7 +633,7 @@ def export_to_file(
 
             message_list.append(message)
 
-        output = salvar_csv(message_list)
+        output = salvar_csv(message_list, cartorio=cartorio if cartorio else None)
         return output
     except Exception as e:
         logger.error(f"Erro ao buscar histórico de mensagens: {e}")
@@ -631,11 +643,11 @@ def export_to_file(
         pg.desconectar()
 
 
-def salvar_csv(message_list):
+def salvar_csv(message_list, cartorio="ALL"):
     """Salva os dados da message_list em um arquivo CSV."""
 
     FILES_DIR = "files"
-    filename = f"Export-{today.strftime('%d%m%Y-%H%M%S')}.csv"
+    filename = f"[{cartorio}]-ExportResults{today.strftime('%d%m%Y-%H%M%S')}.csv"
 
     if not message_list:
         logger.info("Nada para salvar.")
@@ -653,4 +665,26 @@ def salvar_csv(message_list):
     return {"file_dir": FILES_DIR, "filename": filename}
 
 
+def allowed_file(filename):
+    ALLOWED_EXTENSIONS = {'xml'}
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def delete_xml(filename):
+    FILES_DIR = 'files'
+    try:
+        os.remove(os.path.join(FILES_DIR, filename))
+        print("tentando remover")
+        return {"sucess": True}
+    except Exception as e:
+        print(e)
+        return {"error": e}
+    
+
+def importar_xml():
+    
+    url = f"{BASE_API_URL}/extrair"
+    response = requests.request(method="GET", url=url)
+   
+    return json.loads(response.text)
 
