@@ -191,7 +191,7 @@ def message_update_status(
             cursor = pg.conn.cursor()
 
             query = f"""INSERT INTO message_history (message_id, sender_id, recipient_id, error_message,error_code, message_status)
-                                VALUES (%s, %s, %s,%s,%s);"""
+                                VALUES (%s, %s, %s,%s,%s,%s);"""
 
             vars = (
                 message_id,
