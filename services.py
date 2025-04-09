@@ -54,12 +54,14 @@ def check_response(response):
                                 recipient_id = status["recipient_id"]
                                 for error in status["errors"]:
                                     error_message = error["message"]
+                                    error_code = error["code"]
                                 message_update_status(
                                     message_status,
                                     message_id,
                                     phone_number_id=phone_number_id,
                                     recipient_id=recipient_id,
                                     error_message=error_message,
+                                    error_code=error_code
                                 )
                             # Atualiza o status das mensagens já registradas.
                             # Alterado a pedido do Anderson, para registrar todos as etapas da mensagem.
@@ -85,6 +87,7 @@ def auto_reply(phone_number_id, reply_to, message_id, message_body):
         pg = db_connect()
         pg.conectar()
         cursor = pg.conn.cursor()
+        # Checar se a resposta automática já foi enviada pelo menos a dois dias, para não enviar repetidamente.
         query = """
             SELECT 
                count(*)
@@ -176,7 +179,7 @@ def autoreply_history(message_id, phone_number_id, recipient, message_status):
 
 
 def message_update_status(
-    message_status, message_id, phone_number_id="", recipient_id="", error_message=""
+    message_status, message_id, phone_number_id="", recipient_id="", error_message="", error_code=""
 ):
     """
     Atualiza o status das mensagens enviadas.
@@ -187,7 +190,7 @@ def message_update_status(
             pg.conectar()
             cursor = pg.conn.cursor()
 
-            query = f"""INSERT INTO message_history (message_id, sender_id, recipient_id, error_message, message_status)
+            query = f"""INSERT INTO message_history (message_id, sender_id, recipient_id, error_message,error_code, message_status)
                                 VALUES (%s, %s, %s,%s,%s);"""
 
             vars = (
@@ -195,6 +198,7 @@ def message_update_status(
                 phone_number_id,
                 recipient_id,
                 error_message,
+                error_code,
                 message_status,
             )
 
