@@ -5,13 +5,14 @@ import requests
 from config import find_token, db_connect
 from utils.logger import Logger
 from datetime import datetime, timedelta
+from send_mail import info_template_quality
 import time
 import csv
 import os
 import json
 
 
-BASE_API_URL = 'http://localhost:5001'
+BASE_API_URL = "http://localhost:5001"
 
 today = datetime.now()
 
@@ -19,14 +20,22 @@ logger = Logger().get_logger()
 
 
 def check_response(response):
-    """Função para checagem de alertas recebedidos do webhook"""
-
-    # Process WhatsApp message
+    
+    # Tratamentos do callback do webhook do WhatsApp Business
+    
     try:
         entries = response.get("entry", [])
         for entry in entries:
             for change in entry.get("changes", []):
                 value = change.get("value")
+
+                # Envia por email alterações na classificação de qualidade das templates
+                if "message_template_quality_update" in change.values():
+                    template_id = str(value.get("message_template_id"))
+                    template_name = str(value.get("message_template_name"))
+                    new_quality_score = str(value.get("new_quality_score"))
+                    info_template_quality(template_name, template_id, new_quality_score)
+
                 if value:
                     phone_number_id = value["metadata"]["phone_number_id"]
                     # Verifica se foi recebido alguma mensagem, e chama a função de resposta automática
@@ -61,7 +70,7 @@ def check_response(response):
                                     phone_number_id=phone_number_id,
                                     recipient_id=recipient_id,
                                     error_message=error_message,
-                                    error_code=error_code
+                                    error_code=error_code,
                                 )
                             # Atualiza o status das mensagens já registradas.
                             # Alterado a pedido do Anderson, para registrar todos as etapas da mensagem.
@@ -71,6 +80,7 @@ def check_response(response):
                                 recipient_id,
                                 message_status,
                             )
+                    
     except Exception as e:
         logger.error(f"Erro - {e}")
 
@@ -179,7 +189,12 @@ def autoreply_history(message_id, phone_number_id, recipient, message_status):
 
 
 def message_update_status(
-    message_status, message_id, phone_number_id="", recipient_id="", error_message="", error_code=""
+    message_status,
+    message_id,
+    phone_number_id="",
+    recipient_id="",
+    error_message="",
+    error_code="",
 ):
     """
     Atualiza o status das mensagens enviadas.
@@ -306,8 +321,7 @@ def get_total_disparos(
     """
 
     params = []
-    
-    
+
     if telefone:
         query += " AND ze.whatsapp LIKE %s"
         params.append(f"%{telefone}%")
@@ -364,7 +378,7 @@ def get_disparos(
     """
     Retorna uma lista com o histórico de disparos realizados incluindo informações do protocolo
     """
-    
+
     params = []
 
     try:
@@ -407,8 +421,7 @@ def get_disparos(
             LEFT JOIN devedores d ON d.titulo_id = t.id
             WHERE 1=1          
         """
-        
-        
+
         if telefone:
             query += " AND ze.whatsapp LIKE %s"
             params.append(f"%{telefone}%")
@@ -670,12 +683,12 @@ def salvar_csv(message_list, cartorio="ALL"):
 
 
 def allowed_file(filename):
-    ALLOWED_EXTENSIONS = {'xml'}
+    ALLOWED_EXTENSIONS = {"xml"}
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def delete_xml(filename):
-    FILES_DIR = 'files'
+    FILES_DIR = "files"
     try:
         os.remove(os.path.join(FILES_DIR, filename))
         print("tentando remover")
@@ -683,12 +696,33 @@ def delete_xml(filename):
     except Exception as e:
         print(e)
         return {"error": e}
+
+
+def agendar_disparo(data_agendamento, usuario, cartorio, arquivo):
+
+    try:
+        pg = db_connect()
+        pg.conectar()
+        cursor = pg.conn.cursor()
+        vars = (data_agendamento, usuario, cartorio, arquivo)
+
+        query = f"""
+            INSERT INTO 
+                public.agendamentos
+                (
+                data_disparo, usuario, cartorio_id, nome_arquivo
+                )
+                VALUES 
+                (%s, %s, %s, %s);
+        """
+
+        cursor.execute(query=query, vars=vars)
+        pg.conn.commit()
+        pg.desconectar()
+
+
+    except Exception as e:
+        return jsonify({"Erro": f"Erro inserindo agendamento {e}"})
     
 
-def importar_xml():
-    
-    url = f"{BASE_API_URL}/extrair"
-    response = requests.request(method="GET", url=url)
-   
-    return json.loads(response.text)
-
+    return {"Status": "Sucesso"}
