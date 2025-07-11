@@ -81,6 +81,7 @@ def check_response(response):
                                     error_message=error_message,
                                     error_code=error_code,
                                 )
+                                continue
                             # Atualiza o status das mensagens já registradas.
                             # Alterado a pedido do Anderson, para registrar todos as etapas da mensagem.
                             message_received(
