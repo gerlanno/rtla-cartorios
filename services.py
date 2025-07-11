@@ -41,6 +41,14 @@ def check_response(response):
                     # Verifica se foi recebido alguma mensagem, e chama a função de resposta automática
                     if value.get("messages"):
                         for message in value["messages"]:
+                            """
+                            if message.get("button"):
+                                if message.get("button").get("payload"):
+                                    payload = message.get("button").get("payload")
+                                    if payload == "SAIR":
+                                        messageid_original = message.get("context").get("message_id")
+                            
+                            """
                             message_id = message["id"]
                             from_number = message["from"]
                             message_body = (
@@ -61,9 +69,9 @@ def check_response(response):
                             # Em caso de Falha, inserir no banco de dados.
                             if message_status == "failed":
                                 recipient_id = status["recipient_id"]
-                                for error in status["errors"]:
-                                    error_message = error["message"]
-                                    error_code = error["code"]
+                                if status["errors"]:                                    
+                                    error_message = status["errors"][0]["message"]
+                                    error_code = status["errors"][0]["code"]
                                 message_update_status(
                                     message_status,
                                     message_id,
