@@ -62,24 +62,26 @@ def check_response(response):
                     # Verifica se chegou alguma atualização de status de mensagens e chama a função de registro de
                     # atualizações
                     elif value.get("statuses"):
-                        for status in value["statuses"]:
+                        for i, status in enumerate(value["statuses"]):
+                            logger.info(f"STATUS: PASSOU AQUI{i}")
+                           
                             message_id = status["id"]
                             message_status = status["status"]
                             recipient_id = status["recipient_id"]
                             # Em caso de Falha, inserir no banco de dados.
                             if message_status == "failed":
-                                recipient_id = status["recipient_id"]
+                                
                                 if status["errors"]:                                    
                                     error_message = status["errors"][0]["message"]
                                     error_code = status["errors"][0]["code"]
-                                message_update_status(
-                                    message_status,
-                                    message_id,
-                                    phone_number_id=phone_number_id,
-                                    recipient_id=recipient_id,
-                                    error_message=error_message,
-                                    error_code=error_code,
-                                )
+                            message_update_status(
+                                message_status,
+                                message_id,
+                                phone_number_id=phone_number_id,
+                                recipient_id=recipient_id,
+                                error_message=error_message,
+                                error_code=error_code,
+                            )
                             # Atualiza o status das mensagens já registradas.
                             # Alterado a pedido do Anderson, para registrar todos as etapas da mensagem.
                             message_received(
