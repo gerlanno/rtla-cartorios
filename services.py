@@ -5,7 +5,7 @@ import requests
 from config import find_token, db_connect
 from utils.logger import Logger
 from datetime import datetime, timedelta
-from send_mail import info_template_quality
+
 import time
 import csv
 import os
@@ -34,7 +34,7 @@ def check_response(response):
                     template_id = str(value.get("message_template_id"))
                     template_name = str(value.get("message_template_name"))
                     new_quality_score = str(value.get("new_quality_score"))
-                    info_template_quality(template_name, template_id, new_quality_score)
+                    logger.info(f"ATUALIZAÇÃO DE QUALIDADE DA TEMPLATE: Template: {template_name}, ID: {template_id}, Nova qualidade: {new_quality_score}")
 
                 if value:
                     phone_number_id = value["metadata"]["phone_number_id"]
