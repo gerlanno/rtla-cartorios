@@ -69,19 +69,18 @@ def check_response(response):
                             message_status = status["status"]
                             recipient_id = status["recipient_id"]
                             # Em caso de Falha, inserir no banco de dados.
-                            if message_status == "failed":
-                                
+                            if message_status == "failed":                                
                                 if status["errors"]:                                    
                                     error_message = status["errors"][0]["message"]
                                     error_code = status["errors"][0]["code"]
-                            message_update_status(
-                                message_status,
-                                message_id,
-                                phone_number_id=phone_number_id,
-                                recipient_id=recipient_id,
-                                error_message=error_message,
-                                error_code=error_code,
-                            )
+                                message_update_status(
+                                    message_status,
+                                    message_id,
+                                    phone_number_id=phone_number_id,
+                                    recipient_id=recipient_id,
+                                    error_message=error_message,
+                                    error_code=error_code,
+                                )
                             # Atualiza o status das mensagens já registradas.
                             # Alterado a pedido do Anderson, para registrar todos as etapas da mensagem.
                             message_received(
