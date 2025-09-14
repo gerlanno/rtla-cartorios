@@ -10,12 +10,14 @@ def create_app():
     
     app = Flask(__name__, template_folder="templates")
     app.config["SQLALCHEMY_DATABASE_URI"] = USERS_DB
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.secret_key = FLASK_SECRET_KEY
     app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
     app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # Limite de 10MB
 
     # Inicializa as extensões
     db.init_app(app)
+
     login_manager.init_app(app)
     migrate.init_app(app, db)
 

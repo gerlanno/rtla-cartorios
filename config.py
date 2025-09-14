@@ -15,15 +15,25 @@ PRIMEIRO_CARTORIO_DE_FORTALEZA = "1"
 OSIAN_ARARIPE = "5"
 CARTORIO_AGUIAR = "8"
 
+# Configuração do email
+email_config = {
+    "EMAIL_PASSWORD": os.getenv("GMAIL_PASS"),
+    "FROM_EMAIL": os.getenv("FROM_EMAIL"),
+    "TO_EMAIL": os.getenv("TO_EMAIL"),
+}
+
 db_config = {
-    "host": "localhost",
+    "host": "192.168.15.60",
     "database": "dbsender",
     "user": "postgres",
-    "password": os.getenv("DB_PG_PASS"),
+    "password": os.getenv("PG_PASS"),
+    "port": os.getenv("PG_DB_PORT"),
 }
 
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
 USERS_DB = os.getenv("USERS_DB")
+OPENAI_APIKEY = os.getenv("OPENAI_APIKEY")
+PG_CONNECT_STRING = os.getenv("PG_CONNECT_STRING")
 
 wa_config = {
     "OSIAN1": {
@@ -104,13 +114,13 @@ def find_token(phone_number_id):
     return token_found if token_found else print("Token não localizado")
 
 
-
 class ConexaoDB:
-    def __init__(self, db_host, db_name, db_user, db_pass):
+    def __init__(self, db_host, db_name, db_user, db_pass, db_port):
         self.db_host = db_host
         self.db_name = db_name
         self.db_user = db_user
         self.db_pass = db_pass
+        self.db_port = db_port
         self.conn = None
         self.cursor = None
 
@@ -121,9 +131,10 @@ class ConexaoDB:
                 database=self.db_name,
                 user=self.db_user,
                 password=self.db_pass,
+                port=self.db_port,
             )
             self.cursor = self.conn.cursor()
-            
+
         except Exception as e:
             logger.error(f"Erro ao conectar com banco de dados: {e}")
 
@@ -132,7 +143,6 @@ class ConexaoDB:
             self.cursor.close()
         if self.conn is not None:
             self.conn.close()
-           
 
 
 def db_connect():
@@ -141,5 +151,6 @@ def db_connect():
         db_config.get("database"),
         db_config.get("user"),
         db_config.get("password"),
+        db_config.get("port"),
     )
     return pg

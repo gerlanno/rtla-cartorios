@@ -56,11 +56,11 @@
                         <input type="text" class="form-control" id="telefone" name="telefone" value="{{ request.args.get('telefone', '') }}">
                     </div>
                     <div class="col-md-2">
-                        <label for="data_inicio" class="form-label">Data Inicio</label>
+                        <label for="data_inicio" class="form-label">Data Inicio Disparos</label>
                         <input type="date" class="form-control" id="data_inicio" name="data_inicio" value="{{ request.args.get('data_inicio', '') }}">
                     </div>
                     <div class="col-md-2">
-                        <label for="data_fim" class="form-label">Data Fim</label>
+                        <label for="data_fim" class="form-label">Data Fim Disparos</label>
                         <input type="date" class="form-control" id="data_fim" name="data_fim" value="{{ request.args.get('data_fim', '') }}">
                     </div>
                     <div class="col-md-2 d-flex">
@@ -184,6 +184,12 @@
                 <div class="modal-body">
                     <div id="messageList"></div>
                 </div>
+
+                {% if  current_user.is_admin %}
+                <div>
+                    <button type="button" class="btn btn-outline-danger">Excluir whatsapp</button>
+                </div>
+                    {% endif %}
             </div>
         </div>
     </div>

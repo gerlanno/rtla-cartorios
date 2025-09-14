@@ -34,9 +34,9 @@ class Logger:
 
         # Criar novo handler para o arquivo do dia
         self.handler = TimedRotatingFileHandler(
-            log_file, when="midnight", interval=1, backupCount=15
+            log_file, when="midnight", interval=1, backupCount=7
         )
-        # self.handler.suffix = "%Y-%m-%d"
+        self.handler.suffix = "%Y-%m-%d"
 
         formatter = logging.Formatter(
             "%(asctime)s - %(levelname)s - %(message)s - Script: %(filename)s"
@@ -49,3 +49,5 @@ class Logger:
         """Garante que o log está atualizado diariamente"""
         self.update_log_file()
         return self.logger
+
+

@@ -316,9 +316,9 @@ def setup_routes(app, db):
                     return redirect(url_for("disparos"))
 
             if request.args.get("import") == "True":
-                status = importar_xml()
+                
                 if status.get("sucess"):
-                    flash(message="Importação concluída", category="sucess")
+                    flash(message="Importação concluída", category="success")
                     return redirect(url_for("disparos"))
                 else:
                     flash(message="Falha na importação", category="danger")
@@ -327,12 +327,15 @@ def setup_routes(app, db):
 
         elif request.method == "POST":
 
-            agendamento = str(request.form.get('dataAgendamento')).replace('T', ' ')
+            data_agendamento = str(request.form.get('dataAgendamento')).replace('T', ' ')
             arquivo = str(request.args.get("filename"))
             usuario = current_user.nome
             cartorio = current_user.cartorio_id
-            print(agendamento, usuario, cartorio, arquivo)
+            status = agendar_disparo(data_agendamento, usuario, cartorio, arquivo)
 
+            if status.get("Status") == "Sucesso":
+                flash(message=f"Disparo agendado com sucesso para: {data_agendamento}", category="success")
+                return redirect(url_for("disparos"))
             #CRIAR O ARQUIVO SCHEDULE PARA AGENDAMENTO QUE RECEBERÁ A DATA COMO PARAMETRO
             
             #data_hora = datetime.strptime(agendamento, "%Y-%m-%d %H:%M")
@@ -340,3 +343,4 @@ def setup_routes(app, db):
 
             
         return redirect(url_for("disparos"))
+

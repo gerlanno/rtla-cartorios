@@ -4,7 +4,7 @@ import smtplib
 import ssl
 import os
 import mimetypes
-from config import email_config
+from config import email_gitconfig
 
 
 

@@ -5,7 +5,7 @@ import requests
 from config import find_token, db_connect
 from utils.logger import Logger
 from datetime import datetime, timedelta
-
+import pandas as pd
 import time
 import csv
 import os
@@ -63,8 +63,7 @@ def check_response(response):
                     # atualizações
                     elif value.get("statuses"):
                         for i, status in enumerate(value["statuses"]):
-                            logger.info(f"STATUS: PASSOU AQUI{i}")
-                           
+                                                      
                             message_id = status["id"]
                             message_status = status["status"]
                             recipient_id = status["recipient_id"]
@@ -131,6 +130,7 @@ def auto_reply(phone_number_id, reply_to, message_id, message_body):
         logger.info(f"Resultado query {resultados}")
         reply_message = """Olá, Eu sou o 🤖 do Atendimento Virtual do *Instituto de Cartórios de Protestos do Ceará - IEPTBCE*, o seu Assistente Virtual para informações. Caso tenha recebido um alerta, favor entre em contato com nosso SAC nos links: \n\nWhatsapp: https://wa.me/5585982009501 \nOu acesse nosso site: https://site.ieptbce.com.br"""
 
+        # Buscar o token da acc de acordo com o phone_number_id
         whatsapp_token = find_token(phone_number_id)
 
         api_url = f"https://graph.facebook.com/v20.0/{phone_number_id}/messages"
@@ -318,7 +318,7 @@ def get_total_disparos(
             LEFT JOIN message_history mh ON mh.message_id = ze.messageid
             WHERE mh.message_status <> 'failed'
         )
-        SELECT COUNT(ze.messageid)
+        SELECT DISTINCT(ze.messageid)
         FROM zapenviados ze
         LEFT JOIN status_prioridade sp ON sp.messageid = ze.messageid AND sp.prioridade_rank = 1
         LEFT JOIN message_history mh ON mh.message_id = ze.messageid 
@@ -363,8 +363,12 @@ def get_total_disparos(
         pg.conectar()
         cursor = pg.conn.cursor()
         cursor.execute(query, params)
-        total = cursor.fetchone()[0]
+        total = cursor.fetchall()
 
+        print(type(total))
+        print(len(total))
+
+        total = len(total)
     except Exception as e:
         logger.error(f"Erro ao contar disparos: {e}")
         return 0
