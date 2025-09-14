@@ -1,6 +1,6 @@
 import csv
 import os
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from sqlalchemy.exc import IntegrityError
 from werkzeug.utils import secure_filename
 from flask import (
@@ -81,6 +81,20 @@ def setup_routes(app, db):
             telefone = request.args.get("telefone", None)
             data_inicio = request.args.get("data_inicio", None)
             data_fim = request.args.get("data_fim", None)
+            
+            if not data_inicio or not data_fim:
+                hoje = date.today()
+                primeiro_dia = hoje.replace(day=1)
+                # truque para pegar último dia do mês
+                proximo_mes = hoje.replace(day=28) + timedelta(days=4)
+                ultimo_dia = proximo_mes.replace(day=1) - timedelta(days=1)
+
+            if not data_inicio:
+                data_inicio = primeiro_dia.isoformat()
+            if not data_fim:
+                data_fim = ultimo_dia.isoformat()
+
+
             nome = request.args.get("nome", None)
             protocolo = request.args.get("protocolo", None)
             documento = request.args.get("documento", None)
@@ -89,6 +103,8 @@ def setup_routes(app, db):
             else:
                 cartorio = cartorio_user
             page = request.args.get("page", 1, type=int)
+                # se não tiver, define range do mês atual
+
 
             disparos = get_disparos(
                 page,

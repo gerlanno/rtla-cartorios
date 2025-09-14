@@ -185,11 +185,11 @@
                     <div id="messageList"></div>
                 </div>
 
-                {% if  current_user.is_admin %}
+                {% if current_user.is_admin %}
                 <div>
                     <button type="button" class="btn btn-outline-danger">Excluir whatsapp</button>
                 </div>
-                    {% endif %}
+                {% endif %}
             </div>
         </div>
     </div>
@@ -229,6 +229,31 @@
                 });
         }
     </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const inicioInput = document.getElementById("data_inicio");
+            const fimInput = document.getElementById("data_fim");
+
+            // só preenche se não tiver valor vindo do backend (querystring)
+            if (!inicioInput.value) {
+                const hoje = new Date();
+                const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+                const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+
+                // função para formatar YYYY-MM-DD
+                function formatDate(date) {
+                    const y = date.getFullYear();
+                    const m = String(date.getMonth() + 1).padStart(2, "0");
+                    const d = String(date.getDate()).padStart(2, "0");
+                    return `${y}-${m}-${d}`;
+                }
+
+                inicioInput.value = formatDate(primeiroDia);
+                fimInput.value = formatDate(ultimoDia);
+            }
+        });
+    </script>
+
 </body>
 
 {% endblock %}
