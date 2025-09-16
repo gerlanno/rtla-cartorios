@@ -41,14 +41,14 @@ def check_response(response):
                     # Verifica se foi recebido alguma mensagem, e chama a função de resposta automática
                     if value.get("messages"):
                         for message in value["messages"]:
-                            """
+                            
                             if message.get("button"):
                                 if message.get("button").get("payload"):
-                                    payload = message.get("button").get("payload")
-                                    if payload == "SAIR":
+                                    payload = message.get("button").get("payload").lower()
+                                    if payload == "sair":
                                         messageid_original = message.get("context").get("message_id")
+                                        descadastrar_numero_sair(messageid_original)
                             
-                            """
                             message_id = message["id"]
                             from_number = message["from"]
                             message_body = (
@@ -90,6 +90,27 @@ def check_response(response):
                                 message_status,
                             )
                     
+    except Exception as e:
+        logger.error(f"Erro - {e}")
+
+def descadastrar_numero_sair(message_id):
+    """
+    Função responsável por descadastrar um número da lista de disparos que tiver clicado no botão de sair.
+    """
+    try:
+        pg = db_connect()
+        pg.conectar()
+        cursor = pg.conn.cursor()
+        cursor.execute("SELECT whatsapp FROM zapenviados WHERE messageid = %s", (message_id,)) 
+        whatsapp = cursor.fetchone()
+      
+        whatsapp = whatsapp[0][-8:] if whatsapp else None
+    
+        if whatsapp:
+            cursor.execute("UPDATE contatos SET validado = 'false' WHERE telefone LIKE %s", (f"%{whatsapp}%",))
+            pg.conn.commit()
+            logger.info(f"Número descadastrado: {whatsapp}")
+        pg.desconectar()
     except Exception as e:
         logger.error(f"Erro - {e}")
 
