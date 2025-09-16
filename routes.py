@@ -117,16 +117,11 @@ def setup_routes(app, db):
                 documento,
                 cartorio,
             )
-            fim = datetime.now()
-            tempo_execucao = fim - inicio
-            print(f"Tempo de execução disparos: {tempo_execucao}")
-            inicio = datetime.now()
+
             total_disparos = get_total_disparos(
                 telefone, data_inicio, data_fim, nome, protocolo, documento, cartorio
             )
-            fim = datetime.now()
-            tempo_execucao = fim - inicio
-            print(f"Tempo de execução total_disparos: {tempo_execucao}")
+
 
             total_pages = (
                 total_disparos + ITEMS_PER_PAGE - 1

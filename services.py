@@ -365,7 +365,7 @@ def get_disparos(
     """
     Retorna uma lista com o histórico de disparos realizados incluindo informações do protocolo
     """
-
+    logger.info(f"Iniciando get_disparos"+datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     params = []
 
     try:
@@ -429,6 +429,7 @@ def get_disparos(
         cursor.execute(query, params)
 
         results = cursor.fetchall()
+        logger.info(f"Fim get_disparos"+datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
         message_list = []
         for row in results:
