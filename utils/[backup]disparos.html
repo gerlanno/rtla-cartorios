@@ -88,7 +88,8 @@
                                 <th>Protocolo</th>
                                 <th>Documento</th>
                                 <th>Nome</th>
-                                <th>Telefone</th>                    
+                                <th>Telefone</th>
+                                <th>Status</th>
                                 <th>Data/Hora</th>
 
                             </tr>
@@ -99,8 +100,35 @@
                                 <td>{{ message.protocolo }}</td>
                                 <td>{{ message.documento }}</td>
                                 <td>{{ message.nome }}</td>
-                                <td>{{ message.telefone }}</td>                               
-                                <td>{{ message.data }}</td>                                
+                                <td>{{ message.telefone }}</td>
+                                <td>
+                                    <span class="badge {% if message.status == 'read' %}bg-success-subtle text-success{% elif message.status == 'failed' %}bg-danger-subtle text-danger{% else %}bg-warning-subtle text-warning{% endif %}">
+                                        {% if message.status == 'sent' %}
+                                        Enviado
+                                        {% elif message.status == 'failed' %}
+                                        Falhou
+                                        {% elif message.status == 'delivered' %}
+                                        Entregue
+                                        {% elif message.status == 'read' %}
+                                        Lido
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td>{{ message.data }}</td>
+                                {% if message.reply_details %}
+                                <td>
+                                    <a title="Exibir detalhes" href="#" onclick="showMessages('{{ message.telefone }}')" data-bs-toggle="modal" data-bs-target="#messageModal">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill text-success" viewBox="0 0 16 16">
+                                            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3z" />
+                                        </svg>
+                                    </a>
+                                </td>
+                                {% else %}
+                                <td><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle text-secondary" viewBox="0 0 16 16">
+                                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
+                                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4" />
+                                    </svg></td>
+                                {% endif %}
                             </tr>
                             {% endfor %}
                         </tbody>

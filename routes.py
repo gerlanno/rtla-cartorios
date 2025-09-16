@@ -81,7 +81,7 @@ def setup_routes(app, db):
             telefone = request.args.get("telefone", None)
             data_inicio = request.args.get("data_inicio", None)
             data_fim = request.args.get("data_fim", None)
-            
+
             if not data_inicio or not data_fim:
                 hoje = date.today()
                 primeiro_dia = hoje.replace(day=1)
@@ -105,7 +105,7 @@ def setup_routes(app, db):
             page = request.args.get("page", 1, type=int)
                 # se não tiver, define range do mês atual
 
-
+            inicio = datetime.now()
             disparos = get_disparos(
                 page,
                 ITEMS_PER_PAGE,
@@ -117,10 +117,16 @@ def setup_routes(app, db):
                 documento,
                 cartorio,
             )
-
+            fim = datetime.now()
+            tempo_execucao = fim - inicio
+            print(f"Tempo de execução disparos: {tempo_execucao}")
+            inicio = datetime.now()
             total_disparos = get_total_disparos(
                 telefone, data_inicio, data_fim, nome, protocolo, documento, cartorio
             )
+            fim = datetime.now()
+            tempo_execucao = fim - inicio
+            print(f"Tempo de execução total_disparos: {tempo_execucao}")
 
             total_pages = (
                 total_disparos + ITEMS_PER_PAGE - 1

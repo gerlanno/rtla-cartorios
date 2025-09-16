@@ -299,34 +299,13 @@ def get_total_disparos(
     """Conta o total de disparos para calcular páginas."""
 
     query = """
-        WITH status_prioridade AS (
-            SELECT 
-                ze.messageid,
-                mh.message_status,
-                ROW_NUMBER() OVER (
-                    PARTITION BY ze.messageid
-                    ORDER BY 
-                        CASE mh.message_status
-                            WHEN 'read' THEN 1
-                            WHEN 'delivered' THEN 2
-                            WHEN 'sent' THEN 3
-                            WHEN 'pending' THEN 4                           
-                            ELSE 5
-                        END
-                ) as prioridade_rank
-            FROM zapenviados ze
-            LEFT JOIN message_history mh ON mh.message_id = ze.messageid
-            WHERE mh.message_status <> 'failed'
-        )
-        SELECT DISTINCT(ze.messageid)
+        SELECT COUNT(DISTINCT ze.messageid)
         FROM zapenviados ze
-        LEFT JOIN status_prioridade sp ON sp.messageid = ze.messageid AND sp.prioridade_rank = 1
-        LEFT JOIN message_history mh ON mh.message_id = ze.messageid 
-            AND mh.message_status = sp.message_status
         LEFT JOIN titulos t ON t.id = ze.titulo_id
         LEFT JOIN devedores d ON d.titulo_id = t.id
+        LEFT JOIN message_history mh ON mh.message_id = ze.messageid
         WHERE 1=1
-        AND mh.message_status <> 'failed'		
+        AND mh.message_status = 'sent'
         AND LENGTH(REGEXP_REPLACE(d.documento, '[^0-9]', '', 'g')) = 11
     """
 
@@ -356,25 +335,19 @@ def get_total_disparos(
         query += " AND t.cartorio_id = %s"
         params.append(cartorio)
 
-    # query += " AND mh.message_status <> 'failed'"
-
     try:
         pg = db_connect()
         pg.conectar()
         cursor = pg.conn.cursor()
         cursor.execute(query, params)
-        total = cursor.fetchall()
-
-        print(type(total))
-        print(len(total))
-
-        total = len(total)
+        total = cursor.fetchone()[0]  # agora só 1 valor, muito mais rápido
     except Exception as e:
         logger.error(f"Erro ao contar disparos: {e}")
         return 0
     finally:
         pg.desconectar()
     return total
+
 
 
 def get_disparos(
@@ -400,41 +373,22 @@ def get_disparos(
         pg.conectar()
         cursor = pg.conn.cursor()
 
-        query = f"""
-            WITH status_prioridade AS (
-                SELECT 
-                    ze.messageid,
-                    mh.message_status,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY ze.messageid
-                        ORDER BY 
-                            CASE mh.message_status
-                                WHEN 'read' THEN 1
-                                WHEN 'delivered' THEN 2
-                                WHEN 'sent' THEN 3
-                                WHEN 'pending' THEN 4                                
-                                ELSE 5
-                            END
-                    ) as prioridade_rank
-                FROM zapenviados ze
-                LEFT JOIN message_history mh ON mh.message_id = ze.messageid
-                WHERE mh.message_status <> 'failed'
-            )
+        query = f"""            
             SELECT 
                 t.protocolo,
                 d.documento,
                 d.nome,
-                ze.whatsapp as telefone,
-                sp.message_status,
+                ze.whatsapp as telefone,            
                 TO_CHAR(ze.datainsert, 'DD/MM/YYYY HH24:MI:SS') as data
+
             FROM zapenviados ze
-            LEFT JOIN status_prioridade sp ON sp.messageid = ze.messageid AND sp.prioridade_rank = 1
-            LEFT JOIN message_history mh ON mh.message_id = ze.messageid 
-                AND mh.message_status = sp.message_status
-            LEFT JOIN titulos t ON t.id = ze.titulo_id
-            LEFT JOIN devedores d ON d.titulo_id = t.id
-            WHERE 1=1          
+                LEFT JOIN titulos t ON t.id = ze.titulo_id
+            LEFT JOIN devedores d ON d.titulo_id = t.id            
+            LEFT JOIN message_history mh ON mh.message_id = ze.messageid              
+            WHERE 1=1
+            AND mh.message_status = 'sent'          
         """
+      
 
         if telefone:
             query += " AND ze.whatsapp LIKE %s"
@@ -485,9 +439,8 @@ def get_disparos(
                 "documento": row[1] or "",
                 "nome": row[2] or "",
                 "telefone": row[3] or "",
-                "status": row[4] or "",
-                "data": row[5] or "",
-                "reply_details": reply_details,
+                "data": row[4] or "",
+   
             }
 
             message_list.append(message)
