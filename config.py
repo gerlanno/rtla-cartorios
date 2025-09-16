@@ -23,11 +23,11 @@ email_config = {
 }
 
 db_config = {
-    "host": "192.168.15.60",
-    "database": "dbsender",
-    "user": "postgres",
-    "password": os.getenv("PG_PASS"),
-    "port": os.getenv("PG_DB_PORT"),
+    "host": os.getenv("DB_HOST"),
+    "database": os.getenv("DB_NAME"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASS"),
+    "port": os.getenv("DB_PORT"),
 }
 
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
