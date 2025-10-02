@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="mb-0">Alterar Senha</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="alterar-senha-form" action="{{ url_for('alterar_senha') }}" method="POST">
+                            <div class="mb-3">
+                                <label for="senha_atual" class="form-label">Senha Atual</label>
+                                <input type="password" class="form-control" id="senha_atual" name="senha_atual" placeholder="Digite sua senha atual" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="nova_senha" class="form-label">Nova Senha</label>
+                                <input type="password" class="form-control" id="nova_senha" name="nova_senha" placeholder="Digite sua nova senha" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirmar_senha" class="form-label">Confirmar Nova Senha</label>
+                                <input type="password" class="form-control" id="confirmar_senha" name="confirmar_senha" placeholder="Confirme sua nova senha" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Alterar Senha</button>
+                        </form>
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                        {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} mt-3" role="alert">
+                            {{ message }}
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+{% endblock %}
+
