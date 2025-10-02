@@ -271,6 +271,32 @@ def setup_routes(app, db):
 
             flash("Email ou senha inválidos")
             return redirect(url_for("login"))
+        
+    # Rota para alterar a senha
+    @app.route("/alterar-senha", methods=["GET", "POST"])
+    @login_required
+    def alterar_senha():
+        if request.method == "GET":
+            return render_template("alterar_senha.html")
+        
+        if request.method == "POST":
+            senha_atual = request.form.get("senha_atual")
+            nova_senha = request.form.get("nova_senha")
+            confirmar_senha = request.form.get("confirmar_senha")
+
+            if nova_senha != confirmar_senha:
+                flash("As senhas não coincidem", "danger")
+                return redirect(url_for("alterar_senha"))
+            
+            if not current_user.verificar_senha(senha_atual):
+                flash("Senha atual inválida", "danger")
+                return redirect(url_for("alterar_senha"))
+            
+            current_user.alterar_senha(nova_senha)
+            db.session.commit() 
+            flash("Senha alterada com sucesso", "success")
+            return redirect(url_for("disparos"))
+
 
     # Rota de logout
     @app.route("/logout")

@@ -16,3 +16,8 @@ class Usuario(UserMixin, db.Model):
 
     def verificar_senha(self, senha):
         return check_password_hash(self.senha_hash, senha)
+    
+    # MUDAR SENHA 
+    def alterar_senha(self, nova_senha):
+        self.senha_hash = generate_password_hash(nova_senha)
+        db.session.commit()
