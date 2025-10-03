@@ -106,37 +106,55 @@
                         </tbody>
                     </table>
 
+                    {% set filtros = {
+                        'telefone': telefone,
+                        'data_inicio': data_inicio,
+                        'data_fim': data_fim,
+                        'nome': nome,
+                        'protocolo': protocolo,
+                        'documento': documento,
+                        'cartorio': current_user.cartorio_id if current_user.cartorio_id else cartorio
+                    } %}
+                    
                     <nav aria-label="Navegação das páginas">
                         <ul class="pagination justify-content-center">
-
+                    
                             {% if page > 1 %}
                             <li class="page-item">
-                                <a class="page-link" href="{{ url_for('disparos', page=page-1) }}">Anterior</a>
+                                <a class="page-link" href="{{ url_for('disparos', page=1, **filtros) }}">Primeira</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('disparos', page=page-1, **filtros) }}">Anterior</a>
                             </li>
                             {% else %}
                             <li class="page-item disabled">
                                 <span class="page-link">Anterior</span>
                             </li>
                             {% endif %}
-
+                    
                             {% for page_num in range(1, total_pages + 1) %}
-                            {% if page_num > page-5 and page_num < page+5 %} <li class="page-item {% if page_num == page %}active{% endif %}">
-                                <a class="page-link" href="{{ url_for('disparos', page=page_num, telefone=telefone, data_inicio=data_inicio, data_fim=data_fim, nome=nome, protocolo=protocolo, documento=documento, cartorio=current_user.cartorio_id if current_user.cartorio_id else cartorio) }}">{{ page_num }}</a>
+                                {% if page_num > page-5 and page_num < page+5 %}
+                                <li class="page-item {% if page_num == page %}active{% endif %}">
+                                    <a class="page-link" href="{{ url_for('disparos', page=page_num, **filtros) }}">{{ page_num }}</a>
                                 </li>
                                 {% endif %}
-                                {% endfor %}
-
-                                {% if page < total_pages %} <li class="page-item">
-                                    <a class="page-link" href="{{ url_for('disparos', page=page+1, telefone=telefone, data_inicio=data_inicio, data_fim=data_fim, nome=nome, protocolo=protocolo, documento=documento, cartorio=current_user.cartorio_id if current_user.cartorio_id else cartorio) }}">Próximo</a>
-                                    </li>
-
-                                    {% else %}
-                                    <li class="page-item disabled">
-                                        <span class="page-link">Próximo</span>
-                                    </li>
-                                    {% endif %}
-
+                            {% endfor %}
+                    
+                            {% if page < total_pages %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('disparos', page=page+1, **filtros) }}">Próximo</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('disparos', page=total_pages, **filtros) }}">Última</a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Próximo</span>
+                            </li>
+                            {% endif %}
+                    
                         </ul>
+                    </nav>
                         <div class="d-flex justify-content-end">
                             <p>Total de disparos: {{ total_disparos }}</p>
                         </div>
