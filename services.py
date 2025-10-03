@@ -416,10 +416,15 @@ SELECT DISTINCT ON (ze.messageid)
        ze.whatsapp as telefone,
        TO_CHAR(ze.datainsert, 'DD/MM/YYYY HH24:MI:SS') as data
 FROM zapenviados ze
-JOIN titulos t ON t.id = ze.titulo_id
-JOIN contatos c ON c.telefone = ze.whatsapp 
-JOIN devedores d ON d.documento = c.documento
-JOIN message_history mh ON mh.message_id = ze.messageid             
+JOIN titulos t 
+  ON t.id = ze.titulo_id
+JOIN devedores d 
+  ON d.titulo_id = t.id 
+JOIN contatos c 
+  ON c.documento = d.documento
+ AND c.telefone = ze.whatsapp  
+JOIN message_history mh 
+  ON mh.message_id = ze.messageid             
             WHERE 1=1
             AND LENGTH(d.documento) = 11
             AND mh.message_status = 'sent'          
