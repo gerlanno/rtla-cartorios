@@ -622,9 +622,8 @@ JOIN message_history mh ON mh.message_id = ze.messageid
                 "protocolo": row[0] or "",
                 "documento": row[1] or "",
                 "nome": row[2] or "",
-                "telefone": row[3] or "",
-                "status": row[4] or "",
-                "data": row[5] or "",
+                "telefone": row[3] or "", 
+                "data": row[4] or "",
             }
 
             message_list.append(message)
