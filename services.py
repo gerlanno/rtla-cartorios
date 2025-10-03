@@ -20,9 +20,9 @@ logger = Logger().get_logger()
 
 
 def check_response(response):
-    
+
     # Tratamentos do callback do webhook do WhatsApp Business
-    
+
     try:
         entries = response.get("entry", [])
         for entry in entries:
@@ -34,21 +34,27 @@ def check_response(response):
                     template_id = str(value.get("message_template_id"))
                     template_name = str(value.get("message_template_name"))
                     new_quality_score = str(value.get("new_quality_score"))
-                    logger.info(f"ATUALIZAÇÃO DE QUALIDADE DA TEMPLATE: Template: {template_name}, ID: {template_id}, Nova qualidade: {new_quality_score}")
+                    logger.info(
+                        f"ATUALIZAÇÃO DE QUALIDADE DA TEMPLATE: Template: {template_name}, ID: {template_id}, Nova qualidade: {new_quality_score}"
+                    )
 
                 if value:
                     phone_number_id = value["metadata"]["phone_number_id"]
                     # Verifica se foi recebido alguma mensagem, e chama a função de resposta automática
                     if value.get("messages"):
                         for message in value["messages"]:
-                            
+
                             if message.get("button"):
                                 if message.get("button").get("payload"):
-                                    payload = message.get("button").get("payload").lower()
+                                    payload = (
+                                        message.get("button").get("payload").lower()
+                                    )
                                     if payload == "sair":
-                                        messageid_original = message.get("context").get("message_id")
+                                        messageid_original = message.get("context").get(
+                                            "message_id"
+                                        )
                                         descadastrar_numero_sair(messageid_original)
-                            
+
                             message_id = message["id"]
                             from_number = message["from"]
                             message_body = (
@@ -63,13 +69,13 @@ def check_response(response):
                     # atualizações
                     elif value.get("statuses"):
                         for i, status in enumerate(value["statuses"]):
-                                                      
+
                             message_id = status["id"]
                             message_status = status["status"]
                             recipient_id = status["recipient_id"]
                             # Em caso de Falha, inserir no banco de dados.
-                            if message_status == "failed":                                
-                                if status["errors"]:                                    
+                            if message_status == "failed":
+                                if status["errors"]:
                                     error_message = status["errors"][0]["message"]
                                     error_code = status["errors"][0]["code"]
                                 message_update_status(
@@ -89,9 +95,10 @@ def check_response(response):
                                 recipient_id,
                                 message_status,
                             )
-                    
+
     except Exception as e:
         logger.error(f"Erro - {e}")
+
 
 def descadastrar_numero_sair(message_id):
     """
@@ -101,13 +108,18 @@ def descadastrar_numero_sair(message_id):
         pg = db_connect()
         pg.conectar()
         cursor = pg.conn.cursor()
-        cursor.execute("SELECT whatsapp FROM zapenviados WHERE messageid = %s", (message_id,)) 
+        cursor.execute(
+            "SELECT whatsapp FROM zapenviados WHERE messageid = %s", (message_id,)
+        )
         whatsapp = cursor.fetchone()
-      
+
         whatsapp = whatsapp[0][-8:] if whatsapp else None
-    
+
         if whatsapp:
-            cursor.execute("UPDATE contatos SET validado = 'false' WHERE telefone LIKE %s", (f"%{whatsapp}%",))
+            cursor.execute(
+                "UPDATE contatos SET validado = 'false' WHERE telefone LIKE %s",
+                (f"%{whatsapp}%",),
+            )
             pg.conn.commit()
             logger.info(f"Número descadastrado: {whatsapp}")
         pg.desconectar()
@@ -326,6 +338,7 @@ def get_total_disparos(
         LEFT JOIN devedores d ON d.titulo_id = t.id
         LEFT JOIN message_history mh ON mh.message_id = ze.messageid
         WHERE 1=1
+        AND LENGTH(d.documento) = 11         
         AND mh.message_status = 'sent'
         AND LENGTH(REGEXP_REPLACE(d.documento, '[^0-9]', '', 'g')) = 11
     """
@@ -370,7 +383,6 @@ def get_total_disparos(
     return total
 
 
-
 def get_disparos(
     page=1,
     ITEMS_PER_PAGE=10,
@@ -386,7 +398,9 @@ def get_disparos(
     """
     Retorna uma lista com o histórico de disparos realizados incluindo informações do protocolo
     """
-    logger.info(f"Iniciando get_disparos"+datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    logger.info(
+        f"Iniciando get_disparos" + datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    )
     params = []
 
     try:
@@ -395,21 +409,21 @@ def get_disparos(
         cursor = pg.conn.cursor()
 
         query = f"""            
-            SELECT 
-                t.protocolo,
-                d.documento,
-                d.nome,
-                ze.whatsapp as telefone,            
-                TO_CHAR(ze.datainsert, 'DD/MM/YYYY HH24:MI:SS') as data
-
-            FROM zapenviados ze
-                LEFT JOIN titulos t ON t.id = ze.titulo_id
-            LEFT JOIN devedores d ON d.titulo_id = t.id            
-            LEFT JOIN message_history mh ON mh.message_id = ze.messageid              
+SELECT DISTINCT ON (ze.messageid)
+       t.protocolo,
+       d.documento,
+       d.nome,
+       ze.whatsapp as telefone,
+       TO_CHAR(ze.datainsert, 'DD/MM/YYYY HH24:MI:SS') as data
+FROM zapenviados ze
+JOIN titulos t ON t.id = ze.titulo_id
+JOIN contatos c ON c.telefone = ze.whatsapp 
+JOIN devedores d ON d.documento = c.documento
+JOIN message_history mh ON mh.message_id = ze.messageid             
             WHERE 1=1
+            AND LENGTH(d.documento) = 11
             AND mh.message_status = 'sent'          
         """
-      
 
         if telefone:
             query += " AND ze.whatsapp LIKE %s"
@@ -435,10 +449,7 @@ def get_disparos(
             query += " AND t.cartorio_id = %s"
             params.append(cartorio)
 
-        query += " AND mh.message_status <> 'failed'"
-        query += f" AND LENGTH(REGEXP_REPLACE(d.documento, '[^0-9]', '', 'g')) = 11"
-
-        query += " ORDER BY ze.datainsert DESC"
+        query += " ORDER BY ze.messageid, ze.datainsert DESC"
 
         if not save_results:
 
@@ -450,7 +461,7 @@ def get_disparos(
         cursor.execute(query, params)
 
         results = cursor.fetchall()
-        logger.info(f"Fim get_disparos"+datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        logger.info(f"Fim get_disparos" + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
         message_list = []
         for row in results:
@@ -462,7 +473,6 @@ def get_disparos(
                 "nome": row[2] or "",
                 "telefone": row[3] or "",
                 "data": row[4] or "",
-   
             }
 
             message_list.append(message)
@@ -709,9 +719,7 @@ def agendar_disparo(data_agendamento, usuario, cartorio, arquivo):
         pg.conn.commit()
         pg.desconectar()
 
-
     except Exception as e:
         return jsonify({"Erro": f"Erro inserindo agendamento {e}"})
-    
 
     return {"Status": "Sucesso"}
