@@ -567,39 +567,20 @@ def export_to_file(
         cursor = pg.conn.cursor()
 
         query = f"""
-                WITH status_prioridade AS (
-                    SELECT 
-                        ze.messageid,
-                        mh.message_status,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY ze.messageid
-                            ORDER BY 
-                                CASE mh.message_status
-                                    WHEN 'read' THEN 1
-                                    WHEN 'delivered' THEN 2
-                                    WHEN 'sent' THEN 3
-                                    WHEN 'pending' THEN 4                                
-                                    ELSE 5
-                                END
-                        ) as prioridade_rank
-                    FROM zapenviados ze
-                    LEFT JOIN message_history mh ON mh.message_id = ze.messageid
-                    WHERE mh.message_status <> 'failed'
-                )
-                SELECT 
-                    t.protocolo,
-                    d.documento,
-                    d.nome,
-                    ze.whatsapp as telefone,
-                    sp.message_status,
-                    TO_CHAR(ze.datainsert, 'DD/MM/YYYY HH24:MI:SS') as data
-                FROM zapenviados ze
-                LEFT JOIN status_prioridade sp ON sp.messageid = ze.messageid AND sp.prioridade_rank = 1
-                LEFT JOIN message_history mh ON mh.message_id = ze.messageid 
-                    AND mh.message_status = sp.message_status
-                LEFT JOIN titulos t ON t.id = ze.titulo_id
-                LEFT JOIN devedores d ON d.titulo_id = t.id
-                WHERE 1=1          
+               SELECT DISTINCT ON (ze.messageid)
+       t.protocolo,
+       d.documento,
+       d.nome,
+       ze.whatsapp as telefone,
+       TO_CHAR(ze.datainsert, 'DD/MM/YYYY HH24:MI:SS') as data
+FROM zapenviados ze
+JOIN titulos t ON t.id = ze.titulo_id
+JOIN contatos c ON c.telefone = ze.whatsapp 
+JOIN devedores d ON d.documento = c.documento
+JOIN message_history mh ON mh.message_id = ze.messageid             
+            WHERE 1=1
+            AND LENGTH(d.documento) = 11
+            AND mh.message_status = 'sent'      
             """
 
         if telefone:
@@ -626,10 +607,9 @@ def export_to_file(
             query += " AND t.cartorio_id = %s"
             params.append(cartorio)
 
-        query += " AND mh.message_status <> 'failed'"
-        query += f" AND LENGTH(REGEXP_REPLACE(d.documento, '[^0-9]', '', 'g')) = 11"
 
-        query += " ORDER BY ze.datainsert DESC"
+        query += " ORDER BY ze.messageid, ze.datainsert DESC"
+
 
         cursor.execute(query, params)
 
