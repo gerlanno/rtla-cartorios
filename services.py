@@ -386,7 +386,7 @@ def get_disparos(
     """
     Retorna uma lista com o histórico de disparos realizados incluindo informações do protocolo
     """
-    logger.info(f"Iniciando get_disparos"+datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    
     params = []
 
     try:
@@ -395,22 +395,33 @@ def get_disparos(
         cursor = pg.conn.cursor()
 
         query = f"""            
-            SELECT 
-                t.protocolo,
-                d.documento,
-                d.nome,
-                ze.whatsapp as telefone,            
-                TO_CHAR(ze.datainsert, 'DD/MM/YYYY HH24:MI:SS') as data
-
-            FROM zapenviados ze
-                LEFT JOIN titulos t ON t.id = ze.titulo_id
-            LEFT JOIN devedores d ON d.titulo_id = t.id            
-            LEFT JOIN message_history mh ON mh.message_id = ze.messageid              
-            WHERE 1=1
-            AND mh.message_status = 'sent'          
+            WITH mh_ranked AS (
+  SELECT
+    mh.*,
+    ROW_NUMBER() OVER (PARTITION BY mh.message_id ORDER BY mh.created_at DESC) AS rn
+  FROM message_history mh
+)
+SELECT
+  t.protocolo,
+  d.documento,
+  d.nome,
+  ze.whatsapp AS telefone,
+  mhr.message_status,
+  TO_CHAR(ze.datainsert, 'DD/MM/YYYY HH24:MI:SS') AS data,
+  CASE mhr.message_status
+      WHEN 'read' THEN 1
+      WHEN 'delivered' THEN 2
+      WHEN 'sent' THEN 3
+      ELSE 99
+  END AS status_priority
+FROM zapenviados ze
+LEFT JOIN titulos t ON t.id = ze.titulo_id
+LEFT JOIN devedores d ON d.titulo_id = t.id
+LEFT JOIN mh_ranked mhr ON mhr.message_id = ze.messageid AND mhr.rn = 1
+WHERE 1=1 
+AND mhr.message_status IN ('sent','delivered','read')      
         """
       
-
         if telefone:
             query += " AND ze.whatsapp LIKE %s"
             params.append(f"%{telefone}%")
@@ -435,10 +446,12 @@ def get_disparos(
             query += " AND t.cartorio_id = %s"
             params.append(cartorio)
 
-        query += " AND mh.message_status <> 'failed'"
+        #query += " AND mh2.message_status <> 'failed'"
         query += f" AND LENGTH(REGEXP_REPLACE(d.documento, '[^0-9]', '', 'g')) = 11"
 
-        query += " ORDER BY ze.datainsert DESC"
+        
+        query += " ORDER BY ze.datainsert DESC"        #-- menor -> maior = prioridade mais alta primeiro / dentro da mesma prioridade, mais recente primeir
+     
 
         if not save_results:
 
@@ -450,7 +463,7 @@ def get_disparos(
         cursor.execute(query, params)
 
         results = cursor.fetchall()
-        logger.info(f"Fim get_disparos"+datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+       
 
         message_list = []
         for row in results:
@@ -461,7 +474,8 @@ def get_disparos(
                 "documento": row[1] or "",
                 "nome": row[2] or "",
                 "telefone": row[3] or "",
-                "data": row[4] or "",
+                "status": row[4] or "",
+                "data": row[5] or "",
    
             }
 

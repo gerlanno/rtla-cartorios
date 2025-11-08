@@ -133,7 +133,7 @@ def setup_routes(app, db):
                 disparos=disparos,
                 page=page,
                 total_pages=total_pages,
-                telefone=telefone,
+                telefone=telefone,                
                 data_inicio=data_inicio,
                 data_fim=data_fim,
                 nome=nome,
