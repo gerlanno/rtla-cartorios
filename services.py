@@ -47,7 +47,8 @@ def check_response(response):
                                     payload = message.get("button").get("payload").lower()
                                     if payload == "sair":
                                         messageid_original = message.get("context").get("message_id")
-                                        descadastrar_numero_sair(messageid_original)
+                                        nr_whatsapp = message.get("from", "")
+                                        descadastrar_numero_sair(messageid_original, nr_whatsapp)
                             
                             message_id = message["id"]
                             from_number = message["from"]
@@ -93,23 +94,25 @@ def check_response(response):
     except Exception as e:
         logger.error(f"Erro - {e}")
 
-def descadastrar_numero_sair(message_id):
+def descadastrar_numero_sair(message_id, nr_whatsapp):
     """
     Função responsável por descadastrar um número da lista de disparos que tiver clicado no botão de sair.
     """
+    logger.info(f"Solicitado descadastramento do Whatsapp: {nr_whatsapp}")
     try:
         pg = db_connect()
         pg.conectar()
         cursor = pg.conn.cursor()
         cursor.execute("SELECT whatsapp FROM zapenviados WHERE messageid = %s", (message_id,)) 
-        whatsapp = cursor.fetchone()
-        logger.info(f"Solicitado descadastramento do Whatsapp: {whatsapp}")
+        whatsapp = cursor.fetchone()        
         whatsapp = whatsapp[0][-8:] if whatsapp else None
     
         if whatsapp:
             cursor.execute("UPDATE contatos SET validado = 'false' WHERE telefone LIKE %s", (f"%{whatsapp}%",))
             pg.conn.commit()
             logger.info(f"Número descadastrado: {whatsapp}")
+        else:
+            logger.info(f"Número não encontrado: {whatsapp}")
         pg.desconectar()
     except Exception as e:
         logger.error(f"Erro - {e}")
