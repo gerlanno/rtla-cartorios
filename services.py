@@ -103,7 +103,7 @@ def descadastrar_numero_sair(message_id):
         cursor = pg.conn.cursor()
         cursor.execute("SELECT whatsapp FROM zapenviados WHERE messageid = %s", (message_id,)) 
         whatsapp = cursor.fetchone()
-      
+        logger.info(f"Solicitado descadastramento do Whatsapp: {whatsapp}")
         whatsapp = whatsapp[0][-8:] if whatsapp else None
     
         if whatsapp:
@@ -729,3 +729,5 @@ def agendar_disparo(data_agendamento, usuario, cartorio, arquivo):
     
 
     return {"Status": "Sucesso"}
+
+
