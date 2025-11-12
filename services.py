@@ -108,7 +108,7 @@ def descadastrar_numero_sair(message_id, nr_whatsapp):
         whatsapp = whatsapp[0][-8:] if whatsapp else None
     
         if whatsapp:
-            cursor.execute("UPDATE contatos SET validado = false WHERE telefone LIKE %s", (f"%{whatsapp}%",))
+            cursor.execute("UPDATE contatos SET validado = false, detalhes = 'botão sair' WHERE telefone LIKE %s", (f"%{whatsapp}%",))
             pg.conn.commit()
             logger.info(f"Número descadastrado: {whatsapp}")
         else:
