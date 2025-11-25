@@ -310,8 +310,72 @@ def message_received(
 
     pg.desconectar()
 
+def get_base_query(select_clause):
+    """
+    Monta a estrutura correta: CTE -> SELECT (argumento) -> FROM/JOINS -> WHERE base
+    """
+    return f"""
+        WITH mh_ranked AS (
+            SELECT
+                mh.message_id,
+                mh.message_status,
+                mh.created_at,
+                ROW_NUMBER() OVER (
+                    PARTITION BY mh.message_id 
+                    ORDER BY 
+                        CASE mh.message_status
+                            WHEN 'read' THEN 1
+                            WHEN 'delivered' THEN 2
+                            WHEN 'sent' THEN 3
+                            ELSE 4
+                        END ASC,
+                        mh.created_at DESC
+                ) AS rn
+            FROM message_history mh
+            WHERE mh.message_status IN ('read', 'delivered', 'sent')
+        )
+        {select_clause}
+        FROM zapenviados ze
+        INNER JOIN mh_ranked mhr ON mhr.message_id = ze.messageid AND mhr.rn = 1
+        LEFT JOIN titulos t ON t.id = ze.titulo_id
+        LEFT JOIN devedores d ON d.titulo_id = t.id
+        WHERE 1=1
+        AND LENGTH(REGEXP_REPLACE(d.documento, '[^0-9]', '', 'g')) = 11
+    """
 
-def get_total_disparos(
+def apply_filters(query, params, telefone, data_inicio, data_fim, nome, protocolo, documento, cartorio):
+    """Aplica os filtros comuns a todas as queries"""
+    if telefone:
+        query += " AND ze.whatsapp LIKE %s"
+        params.append(f"%{telefone}%")
+    if data_inicio:
+        # Garante formato correto se vier só a data YYYY-MM-DD
+        if len(data_inicio) <= 10: data_inicio = f"{data_inicio} 00:00:01"
+        query += " AND ze.datainsert >= %s"
+        params.append(data_inicio)
+    if data_fim:
+        if len(data_fim) <= 10: data_fim = f"{data_fim} 23:59:59"
+        query += " AND ze.datainsert <= %s"
+        params.append(data_fim)
+    if nome:
+        query += " AND d.nome ILIKE %s"
+        params.append(f"%{nome}%")
+    if protocolo:
+        query += " AND t.protocolo = %s"
+        params.append(protocolo)
+    if documento:
+        query += " AND d.documento = %s"
+        params.append(documento)
+    if cartorio:
+        query += " AND t.cartorio_id = %s"
+        params.append(cartorio)
+    
+    return query, params
+
+
+
+
+def __get_total_disparos(
     telefone=None,
     data_inicio=None,
     data_fim=None,
@@ -320,17 +384,25 @@ def get_total_disparos(
     documento=None,
     cartorio=None,
 ):
-    """Conta o total de disparos para calcular páginas."""
+    """Conta o total de disparos para calcular páginas (considera apenas o último status por message_id)."""
 
     query = """
-        SELECT COUNT(DISTINCT ze.messageid)
+        WITH mh_ranked AS (
+            SELECT
+                mh.message_id,
+                mh.message_status,
+                ROW_NUMBER() OVER (PARTITION BY mh.message_id ORDER BY mh.created_at DESC) AS rn
+            FROM message_history mh
+            -- opcional: filtrar aqui para reduzir quantidade scaneada, ex: WHERE mh.message_status <> 'failed'
+        )
+        SELECT COUNT(*)
         FROM zapenviados ze
         LEFT JOIN titulos t ON t.id = ze.titulo_id
         LEFT JOIN devedores d ON d.titulo_id = t.id
-        LEFT JOIN message_history mh ON mh.message_id = ze.messageid
+        LEFT JOIN mh_ranked mhr ON mhr.message_id = ze.messageid AND mhr.rn = 1
         WHERE 1=1
-        AND mh.message_status = 'sent'
-        AND LENGTH(REGEXP_REPLACE(d.documento, '[^0-9]', '', 'g')) = 11
+          AND mhr.message_status = 'sent'
+          AND LENGTH(REGEXP_REPLACE(d.documento, '[^0-9]', '', 'g')) = 11
     """
 
     params = []
@@ -364,7 +436,7 @@ def get_total_disparos(
         pg.conectar()
         cursor = pg.conn.cursor()
         cursor.execute(query, params)
-        total = cursor.fetchone()[0]  # agora só 1 valor, muito mais rápido
+        total = cursor.fetchone()[0] or 0
     except Exception as e:
         logger.error(f"Erro ao contar disparos: {e}")
         return 0
@@ -372,9 +444,30 @@ def get_total_disparos(
         pg.desconectar()
     return total
 
+def get_total_disparos(telefone=None, data_inicio=None, data_fim=None, nome=None, protocolo=None, documento=None, cartorio=None):
+    params = []
+    
+    # AQUI ESTAVA O ERRO: Agora passamos o SELECT para dentro da função base
+    query = get_base_query("SELECT COUNT(*)")
+
+    # Aplica os filtros (continua igual)
+    query, params = apply_filters(query, params, telefone, data_inicio, data_fim, nome, protocolo, documento, cartorio)
+
+    try:
+        pg = db_connect()
+        pg.conectar()
+        cursor = pg.conn.cursor()
+        cursor.execute(query, params)
+        total = cursor.fetchone()[0] or 0
+        return total
+    except Exception as e:
+        logger.error(f"Erro ao contar disparos: {e}")
+        return 0
+    finally:
+        pg.desconectar()
 
 
-def get_disparos(
+def __get_disparos(
     page=1,
     ITEMS_PER_PAGE=10,
     telefone=None,
@@ -493,6 +586,61 @@ AND mhr.message_status IN ('sent','delivered','read')
     finally:
         pg.desconectar()
 
+def get_disparos(page=1, ITEMS_PER_PAGE=10, telefone=None, data_inicio=None, data_fim=None, nome=None, protocolo=None, documento=None, cartorio=None, save_results=False):
+    params = []
+    
+    # Define as colunas que você quer retornar
+    cols = """
+        SELECT
+            t.protocolo,
+            d.documento,
+            d.nome,
+            ze.whatsapp AS telefone,
+            mhr.message_status,
+            TO_CHAR(ze.datainsert, 'DD/MM/YYYY HH24:MI:SS') AS data
+    """
+    
+    # Monta a query na ordem certa
+    query = get_base_query(cols)
+
+    # Filtros
+    query, params = apply_filters(query, params, telefone, data_inicio, data_fim, nome, protocolo, documento, cartorio)
+
+    query += " ORDER BY ze.datainsert DESC"
+
+    if not save_results:
+        offset = (page - 1) * ITEMS_PER_PAGE
+        query += " LIMIT %s OFFSET %s"
+        params.extend([ITEMS_PER_PAGE, offset])
+
+    try:
+        pg = db_connect()
+        pg.conectar()
+        cursor = pg.conn.cursor()
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+        
+        # ... (resto do código de mapeamento para dicionário igual) ...
+        
+        message_list = []
+        for row in results:
+            message = {
+                "protocolo": row[0] or "",
+                "documento": row[1] or "",
+                "nome": row[2] or "",
+                "telefone": row[3] or "",
+                "status": row[4] or "",
+                "data": row[5] or "",
+            }
+            message_list.append(message)
+            
+        return message_list
+
+    except Exception as e:
+        logger.error(f"Erro ao buscar histórico: {e}")
+        return []
+    finally:
+        pg.desconectar()
 
 def check_exists_reply(sender_id):
     """
@@ -556,7 +704,7 @@ def get_cartorios():
         pg.desconectar()
 
 
-def export_to_file(
+def __export_to_file(
     telefone=None,
     data_inicio=None,
     data_fim=None,
@@ -665,12 +813,78 @@ def export_to_file(
     finally:
         pg.desconectar()
 
+def export_to_file(
+    telefone=None,
+    data_inicio=None,
+    data_fim=None,
+    nome=None,
+    protocolo=None,
+    documento=None,
+    cartorio=None,
+):
+    """
+    Exporta todos os dados filtrados usando a mesma lógica (CTE) da visualização e contagem,
+    garantindo que os números batam e não haja duplicatas.
+    """
+    params = []
 
-def salvar_csv(message_list, cartorio="ALL"):
+    # 1. Define as colunas (mesmas do get_disparos)
+    cols = """
+        SELECT
+            t.protocolo,
+            d.documento,
+            d.nome,
+            ze.whatsapp AS telefone,
+            mhr.message_status,
+            TO_CHAR(ze.datainsert, 'DD/MM/YYYY HH24:MI:SS') AS data
+    """
+
+    # 2. Monta a query na ordem correta (WITH -> SELECT -> FROM)
+    query = get_base_query(cols)
+
+    # 3. Aplica os filtros (usando a função auxiliar criada anteriormente)
+    query, params = apply_filters(query, params, telefone, data_inicio, data_fim, nome, protocolo, documento, cartorio)
+
+    # 4. Ordenação (sem paginação/limit)
+    query += " ORDER BY ze.datainsert DESC"
+
+    try:
+        pg = db_connect()
+        pg.conectar()
+        cursor = pg.conn.cursor()
+        cursor.execute(query, params)
+        
+        results = cursor.fetchall()
+
+        message_list = []
+        for row in results:
+            message = {
+                "protocolo": row[0] or "",
+                "documento": row[1] or "",
+                "nome": row[2] or "",
+                "telefone": row[3] or "",
+                "status": row[4] or "",
+                "data": row[5] or "",
+            }
+            message_list.append(message)
+
+        # Chama a sua função existente que gera o arquivo
+        output = salvar_csv(message_list, cartorio=cartorio if cartorio else None)
+        return output
+
+    except Exception as e:
+        logger.error(f"Erro ao exportar histórico: {e}")
+        return []
+
+    finally:
+        pg.desconectar()
+
+
+def salvar_csv(message_list, cartorio=None):
     """Salva os dados da message_list em um arquivo CSV."""
 
     FILES_DIR = "files"
-    filename = f"[{cartorio}]-ExportResults{today.strftime('%d%m%Y-%H%M%S')}.csv"
+    filename = f"[{cartorio if cartorio else 'TODOS'}]-ExportResults{today.strftime('%d%m%Y-%H%M%S')}.csv"
 
     if not message_list:
         logger.info("Nada para salvar.")
