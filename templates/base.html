@@ -6,127 +6,218 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Histórico de Disparos</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <style>
+    .bg-custom {
+    background-color: #2C4F76;
+    color: white;
+    }
+    
+    :root {
+        --primary-color: #2C4F76;
+        --secondary-color: #c97a03;
+        --text-color: #333;
+        --light-bg: #f8f9fa;
+        --header-height: 80px;
+    }
+
+    body {
+        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background-color: #f4f7f6;
+        color: var(--text-color);
+        padding-top: var(--header-height);
+        /* Prevent content from hiding behind fixed header */
+    }
+
+    /* Modern Glassmorphism Header */
     .header {
-        background-color: #fff;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, .1);
-        padding: 1rem;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: var(--header-height);
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        z-index: 1000;
+        transition: all 0.3s ease;
     }
 
     .header-content {
+        height: 100%;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        padding: 0 1rem;
     }
 
-    .bg-custom {
-        background-color: #2C4F76;
-        /* Cor personalizada */
-        color: white;
-        /* Ajustar a cor do texto se necessário */
+    .logo img {
+        height: 50px;
+        transition: transform 0.3s ease;
     }
 
-    .logo {
-        font-size: 2rem;
-        font-weight: bold;
-        color: #0d6efd;
-        text-decoration: none;
-
+    .logo:hover img {
+        transform: scale(1.05);
     }
 
-    .pagination .page-link {
-        background-color: #2C4F76;
-        /* Azul escuro */
-        color: white;
-        /* Texto branco para melhor contraste */
-        border-color: #2C4F76;
-    }
-
-    .pagination .active .page-link {
-        background-color: #c97a03;
-        /* Cor laranja para destaque */
-        border-color: #c97a03;
-        color: white;
-        font-weight: bold;
-    }
-
-    .pagination .page-link:hover {
-        background-color: #1f3a56;
-        /* Tom mais escuro ao passar o mouse */
-        border-color: #1f3a56;
-    }
-
-
-    .logo:hover {
-        color: #08295c;
-    }
-
+    /* Modern Navigation */
     .nav-menu {
         display: flex;
         align-items: center;
+        gap: 1.5rem;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .nav-item {
+        position: relative;
     }
 
     .nav-link {
-        color: #6c757d;
+        color: #4a5568;
+        font-weight: 500;
+        font-size: 0.95rem;
         text-decoration: none;
-        padding: 0.5rem 1rem;
+        padding: 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
         transition: color 0.3s ease;
     }
 
-    .nav-link:hover {
-        color: #08295c;
+    .nav-link:hover,
+    .nav-link.active {
+        color: var(--primary-color);
     }
 
+    /* Animated Underline */
+    .nav-link span {
+        position: relative;
+        display: inline-block;
+    }
+
+    .nav-link span::after {
+        content: '';
+        position: absolute;
+        width: 0;
+        height: 2px;
+        bottom: -2px;
+        left: 0;
+        background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        transition: width 0.3s ease-in-out;
+        border-radius: 2px;
+    }
+
+    .nav-link:hover span::after {
+        width: 100%;
+    }
+
+    /* Special style for "Bem vindo" */
+    .user-greeting {
+        background: linear-gradient(135deg, rgba(44, 79, 118, 0.1), rgba(201, 122, 3, 0.1));
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        color: var(--primary-color);
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    /* Hover effects for icons */
     .nav-link i {
-        margin-right: 0.5rem;
+        font-size: 1.1rem;
+        transition: transform 0.3s ease;
+    }
+
+    .nav-link:hover i {
+        transform: translateY(-2px);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 992px) {
+        .header-content {
+            flex-direction: column;
+            height: auto;
+            padding: 1rem;
+        }
+
+        .header {
+            height: auto;
+            position: relative;
+        }
+
+        body {
+            padding-top: 0;
+        }
+
+        .nav-menu {
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 1rem;
+            gap: 1rem;
+        }
     }
 </style>
 
 <header class="header">
-    <div class="container">
+    <div class="container h-100">
         <div class="header-content">
-            <a href="{{ url_for('disparos') }}" class="logo"><img src="static/rtla1.png" class="rounded float-start" alt="logo rtla"></a>
-            <nav class="nav nav-pills flex-column flex-sm-row">
-                <ul class="nav justify-content-end">
+            <!-- Logo area -->
+            <a href="{{ url_for('disparos') }}" class="logo">
+                <img src="{{ url_for('static', filename='rtla1.png') }}" alt="RTLA Cartórios" title="Início">
+            </a>
+
+            <!-- Navigation -->
+            <nav>
+                <ul class="nav-menu">
                     {% if current_user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="flex-sm-fill text-sm-center nav-link disabled" href="#" tabindex="-1" aria-disabled="true" style="color: #08295c;">Bem vindo, {{ current_user.nome }}!</a>
-                    </li>
-                    {% endif %}
+
                     {% if current_user.is_admin %}
                     <li class="nav-item">
-                        <a href="{{ url_for('registro') }}" class="nav-link">
+                        <a href="{{ url_for('registro') }}" class="nav-link" title="Cadastrar Novo Usuário">
                             <i class="fas fa-user-plus"></i>
-                            Cadastrar Usuário
+                            <span>Cadastrar</span>
                         </a>
                     </li>
                     {% endif %}
-                    {% if current_user.is_authenticated %}
+
                     <li class="nav-item">
-                        <a href="{{ url_for('disparos') }}" class="nav-link">
-                            <i class="fas fa-user-plus"></i>
-                            Disparos
+                        <a href="{{ url_for('disparos') }}" class="nav-link" title="Histórico de Disparos">
+                            <i class="fas fa-paper-plane"></i>
+                            <span>Disparos</span>
                         </a>
                     </li>
+
                     <li class="nav-item">
-                        <a href="{{ url_for('upload_file') }}" class="nav-link">
+                        <a href="{{ url_for('upload_file') }}" class="nav-link" title="Enviar Arquivo XML">
                             <i class="fas fa-file-upload"></i>
-                            Enviar Arquivo
+                            <span>Upload</span>
                         </a>
                     </li>
+
                     <li class="nav-item">
-                        <a href="{{ url_for('validar_contatos') }}" class="nav-link">
-                            <i class="fas fa-check-circle"></i>
-                            Validar Contatos
+                        <a href="{{ url_for('validar_contatos') }}" class="nav-link" title="Validar Contatos">
+                            <i class="fas fa-check-double"></i>
+                            <span>Validar</span>
                         </a>
                     </li>
+
+                    <!-- Separator -->
+                    <li style="border-left: 1px solid #ddd; height: 24px;"></li>
+
                     <li class="nav-item">
-                        <a href="{{ url_for('logout') }}" class="nav-link">
+                        <span class="user-greeting">
+                            <i class="fas fa-user-circle"></i> {{ current_user.nome }}
+                        </span>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="{{ url_for('logout') }}" class="nav-link text-danger" title="Sair do Sistema">
                             <i class="fas fa-sign-out-alt"></i>
-                            Sair
                         </a>
                     </li>
+
                     {% endif %}
                 </ul>
             </nav>
