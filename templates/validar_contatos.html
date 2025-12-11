@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0"><i class="fas fa-check-circle"></i> Validação de Contatos</h4>
+        </div>
+        <div class="card-body">
+            <!-- Formulário de Busca -->
+            <form method="GET" action="{{ url_for('validar_contatos') }}" class="mb-4">
+                <div class="input-group">
+                    <input type="text" name="telefone" class="form-control" placeholder="Buscar por telefone (ex: 85999999999)" value="{{ telefone if telefone else '' }}">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                </div>
+            </form>
+
+            {% if resultados %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nome</th>
+                            <th>Documento</th>
+                            <th>Telefone</th>
+                            <th class="text-center">Validado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contatosTableBody">
+                        {% for contato in resultados %}
+                        <tr data-telefone="{{ contato.telefone }}" data-documento="{{ contato.documento }}">
+                            <td>{{ contato.nome }}</td>
+                            <td>{{ contato.documento }}</td>
+                            <td>{{ contato.telefone }}</td>
+                            <td class="text-center">
+                                <div class="form-check d-inline-block">
+                                    <input class="form-check-input validacao-checkbox" type="checkbox" {% if contato.validado %}checked{% endif %}>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-end mt-3">
+                <button id="btnSalvar" class="btn btn-success" onclick="salvarAlteracoes()">
+                    <i class="fas fa-save"></i> Salvar Alterações
+                </button>
+            </div>
+            {% elif telefone %}
+            <div class="alert alert-warning" role="alert">
+                <i class="fas fa-exclamation-triangle"></i> Nenhum contato encontrado para o telefone informado.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    async function salvarAlteracoes() {
+        const btn = document.getElementById('btnSalvar');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+        const updates = [];
+        const rows = document.querySelectorAll('#contatosTableBody tr');
+
+        rows.forEach(row => {
+            const telefone = row.getAttribute('data-telefone');
+            const documento = row.getAttribute('data-documento');
+            const checkbox = row.querySelector('.validacao-checkbox');
+
+            updates.push({
+                telefone: telefone,
+                documento: documento,
+                validado: checkbox.checked
+            });
+        });
+
+        if (updates.length === 0) {
+            alert("Nada para salvar.");
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+
+        try {
+            const response = await fetch("{{ url_for('validar_contatos') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ updates: updates })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                alert(`Sucesso! ${result.updated} registros atualizados.`);
+                // Opcional: Recarregar a página para confirmar
+                location.reload(); 
+            } else {
+                alert("Erro ao salvar alterações.");
+            }
+        } catch (error) {
+            console.error("Erro:", error);
+            alert("Erro de conexão ao salvar.");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+</script>
+{% endblock %}

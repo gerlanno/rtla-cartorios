@@ -313,6 +313,7 @@ def message_received(
 def get_base_query(select_clause):
     """
     Monta a estrutura correta: CTE -> SELECT (argumento) -> FROM/JOINS -> WHERE base
+    Correção aplicada: JOIN via tabela de contatos para evitar produto cartesiano em títulos com múltiplos devedores.
     """
     return f"""
         WITH mh_ranked AS (
@@ -337,10 +338,17 @@ def get_base_query(select_clause):
         {select_clause}
         FROM zapenviados ze
         INNER JOIN mh_ranked mhr ON mhr.message_id = ze.messageid AND mhr.rn = 1
+        
+        -- INICIO DA CORREÇÃO: Filtragem via Contatos --
+        INNER JOIN contatos c ON c.telefone = ze.whatsapp
+        -- Vincula o documento do contato ao devedor DESTE título específico (ze.titulo_id)
+        INNER JOIN devedores d ON d.documento = c.documento AND d.titulo_id = ze.titulo_id
+        -- FIM DA CORREÇÃO --
+
         LEFT JOIN titulos t ON t.id = ze.titulo_id
-        LEFT JOIN devedores d ON d.titulo_id = t.id
+        
         WHERE 1=1
-        AND LENGTH(REGEXP_REPLACE(d.documento, '[^0-9]', '', 'g')) = 11
+        AND LENGTH(d.documento) = 11
     """
 
 def apply_filters(query, params, telefone, data_inicio, data_fim, nome, protocolo, documento, cartorio):
@@ -704,114 +712,81 @@ def get_cartorios():
         pg.desconectar()
 
 
-def __export_to_file(
-    telefone=None,
-    data_inicio=None,
-    data_fim=None,
-    nome=None,
-    protocolo=None,
-    documento=None,
-    cartorio=None,
-):
 
-    params = []
 
+
+
+def buscar_contato_por_telefone(telefone):
+    """
+    Busca contatos que contenham o telefone informado.
+    Retorna lista de dicionários com: nome, documento, telefone, validado.
+    """
     try:
         pg = db_connect()
         pg.conectar()
         cursor = pg.conn.cursor()
 
-        query = f"""
-                WITH status_prioridade AS (
-                    SELECT 
-                        ze.messageid,
-                        mh.message_status,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY ze.messageid
-                            ORDER BY 
-                                CASE mh.message_status
-                                    WHEN 'read' THEN 1
-                                    WHEN 'delivered' THEN 2
-                                    WHEN 'sent' THEN 3
-                                    WHEN 'pending' THEN 4                                
-                                    ELSE 5
-                                END
-                        ) as prioridade_rank
-                    FROM zapenviados ze
-                    LEFT JOIN message_history mh ON mh.message_id = ze.messageid
-                    WHERE mh.message_status <> 'failed'
-                )
-                SELECT 
-                    t.protocolo,
-                    d.documento,
-                    d.nome,
-                    ze.whatsapp as telefone,
-                    sp.message_status,
-                    TO_CHAR(ze.datainsert, 'DD/MM/YYYY HH24:MI:SS') as data
-                FROM zapenviados ze
-                LEFT JOIN status_prioridade sp ON sp.messageid = ze.messageid AND sp.prioridade_rank = 1
-                LEFT JOIN message_history mh ON mh.message_id = ze.messageid 
-                    AND mh.message_status = sp.message_status
-                LEFT JOIN titulos t ON t.id = ze.titulo_id
-                LEFT JOIN devedores d ON d.titulo_id = t.id
-                WHERE 1=1          
-            """
-
-        if telefone:
-            query += " AND ze.whatsapp LIKE %s"
-            params.append(f"%{telefone}%")
-        if data_inicio:
-            data_inicio = f"{data_inicio} 00:00:01"
-            query += " AND ze.datainsert >= %s"
-            params.append(data_inicio)
-        if data_fim:
-            data_fim = f"{data_fim} 23:59:59"
-            query += " AND ze.datainsert <= %s"
-            params.append(data_fim)
-        if nome:
-            query += " AND d.nome ILIKE %s"
-            params.append(f"%{nome}%")
-        if protocolo:
-            query += " AND t.protocolo = %s"
-            params.append(protocolo)
-        if documento:
-            query += " AND d.documento = %s"
-            params.append(documento)
-        if cartorio:
-            query += " AND t.cartorio_id = %s"
-            params.append(cartorio)
-
-        query += " AND mh.message_status <> 'failed'"
-        query += f" AND LENGTH(REGEXP_REPLACE(d.documento, '[^0-9]', '', 'g')) = 11"
-
-        query += " ORDER BY ze.datainsert DESC"
-
-        cursor.execute(query, params)
-
+        # Join com devedores para pegar o nome
+        # DISTINCT para evitar duplicados se o mesmo devedor tiver múltiplos títulos
+        query = """
+            SELECT DISTINCT ON (c.documento, c.telefone)
+                d.nome,
+                c.documento,
+                c.telefone,
+                c.validado
+            FROM contatos c
+            LEFT JOIN devedores d ON c.documento = d.documento
+            WHERE c.telefone LIKE %s
+            LIMIT 50
+        """
+        
+        cursor.execute(query, (f"%{telefone}%",))
         results = cursor.fetchall()
-
-        message_list = []
+        
+        contatos = []
         for row in results:
+            contatos.append({
+                "nome": row[0] or "Não identificado",
+                "documento": row[1],
+                "telefone": row[2],
+                "validado": row[3]
+            })
+            
+        return contatos
 
-            message = {
-                "protocolo": row[0] or "",
-                "documento": row[1] or "",
-                "nome": row[2] or "",
-                "telefone": row[3] or "",
-                "status": row[4] or "",
-                "data": row[5] or "",
-            }
-
-            message_list.append(message)
-
-        output = salvar_csv(message_list, cartorio=cartorio if cartorio else None)
-        return output
     except Exception as e:
-        logger.error(f"Erro ao buscar histórico de mensagens: {e}")
+        logger.error(f"Erro ao buscar contato: {e}")
         return []
-
     finally:
         pg.desconectar()
+
+
+def atualizar_validacao_contato(telefone, documento, validado):
+    """
+    Atualiza o status de validação de um contato.
+    """
+    try:
+        pg = db_connect()
+        pg.conectar()
+        cursor = pg.conn.cursor()
+
+        query = """
+            UPDATE contatos 
+            SET validado = %s 
+            WHERE telefone = %s AND documento = %s
+        """
+        
+        cursor.execute(query, (validado, telefone, documento))
+        pg.conn.commit()
+        
+        return True
+    except Exception as e:
+        logger.error(f"Erro ao atualizar contatos: {e}")
+        return False
+    finally:
+        pg.desconectar()
+
+
 
 def export_to_file(
     telefone=None,

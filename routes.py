@@ -355,9 +355,31 @@ def setup_routes(app, db):
                 return redirect(url_for("disparos"))
             #CRIAR O ARQUIVO SCHEDULE PARA AGENDAMENTO QUE RECEBERÁ A DATA COMO PARAMETRO
             
+            
             #data_hora = datetime.strptime(agendamento, "%Y-%m-%d %H:%M")
             #print(type(data_hora), data_hora)
 
             
         return redirect(url_for("disparos"))
+
+    @app.route("/validar-contatos", methods=["GET", "POST"])
+    @login_required
+    def validar_contatos():
+        if request.method == "GET":
+            telefone = request.args.get("telefone")
+            resultados = []
+            if telefone:
+                resultados = buscar_contato_por_telefone(telefone)
+            return render_template("validar_contatos.html", resultados=resultados, telefone=telefone)
+        
+        if request.method == "POST":
+            data = request.get_json()
+            updates = data.get("updates", [])
+            
+            sucesso = 0
+            for update in updates:
+                if atualizar_validacao_contato(update.get("telefone"), update.get("documento"), update.get("validado")):
+                    sucesso += 1
+            
+            return jsonify({"status": "success", "updated": sucesso}), 200
 
