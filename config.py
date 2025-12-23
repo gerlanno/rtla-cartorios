@@ -1,5 +1,4 @@
 import os
-import os
 import pprint
 from dotenv import load_dotenv
 import psycopg2

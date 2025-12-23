@@ -98,15 +98,15 @@ def descadastrar_numero_sair(message_id, nr_whatsapp):
     """
     Função responsável por descadastrar um número da lista de disparos que tiver clicado no botão de sair.
     """
-    logger.info(f"Solicitado descadastramento do Whatsapp: {nr_whatsapp}")
+    logger.info(f"Solicitado descadastramento do Whatsapp: {nr_whatsapp} - ID: {message_id}")
     try:
         pg = db_connect()
         pg.conectar()
         cursor = pg.conn.cursor()
         cursor.execute("SELECT whatsapp FROM zapenviados WHERE messageid = %s", (message_id,)) 
         whatsapp = cursor.fetchone()        
-        whatsapp = whatsapp[0][-8:] if whatsapp else None
-    
+        whatsapp = whatsapp[0][-8:] if whatsapp else None      
+
         if whatsapp:
             cursor.execute("UPDATE contatos SET validado = false, detalhes = 'botão sair' WHERE telefone LIKE %s", (f"%{whatsapp}%",))
             pg.conn.commit()
@@ -116,6 +116,7 @@ def descadastrar_numero_sair(message_id, nr_whatsapp):
         pg.desconectar()
     except Exception as e:
         logger.error(f"Erro - {e}")
+
 
 
 def auto_reply(phone_number_id, reply_to, message_id, message_body):
@@ -921,5 +922,4 @@ def agendar_disparo(data_agendamento, usuario, cartorio, arquivo):
     
 
     return {"Status": "Sucesso"}
-
 
