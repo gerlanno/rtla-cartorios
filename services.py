@@ -928,8 +928,3 @@ def agendar_disparo(data_agendamento, usuario, cartorio, arquivo):
     
 
     return {"Status": "Sucesso"}
-
-if __name__ == "__main__":
-    payload = {'object': 'whatsapp_business_account', 'entry': [{'id': '150991778095452', 'changes': [{'value': {'messaging_product': 'whatsapp', 'metadata': {'display_phone_number': '558597590064', 'phone_number_id': '145717898625245'}, 'contacts': [{'profile': {'name': 'MannÃ¼h Felix ðŸ§œðŸ¼\u200dâ™€ï¸'}, 'wa_id': '558591039350'}], 'messages': [{'context': {'from': '558597590064', 'id': 'wamid.HBgMNTU4NTkxMDM5MzUwFQIAERgSN0M1QzNDREFBM0QzMDdEM0EzAA=='}, 'from': '558591039350', 'id': 'wamid.HBgMNTU4NTkxMDM5MzUwFQIAEhggQUM3NDc5RTczREQ3RjgyRjVFMjQyQzM5NzI1QUFGNDgA', 'timestamp': '1766495237', 'type': 'button', 'button': {'payload': 'Sair', 'text': 'Sair'}}]}, 'field': 'messages'}]}]}
-
-    check_response(payload)
