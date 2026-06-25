@@ -14,6 +14,9 @@ PRIMEIRO_CARTORIO_DE_FORTALEZA = "1"
 OSIAN_ARARIPE = "5"
 CARTORIO_AGUIAR = "8"
 
+WEBHOOK_HOMESERVER = os.getenv("WEBHOOK_HOMESERVER")
+API_KEY_HOMESERVER = os.getenv("API_KEY_HOMESERVER")
+
 # Configuração do email
 email_config = {
     "EMAIL_PASSWORD": os.getenv("GMAIL_PASS"),

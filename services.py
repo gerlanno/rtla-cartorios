@@ -1,8 +1,9 @@
 from fileinput import filename
 import stat
+import ast
 from flask import jsonify
 import requests
-from config import find_token, db_connect
+from config import API_KEY_HOMESERVER, find_token, db_connect, WEBHOOK_HOMESERVER, API_KEY_HOMESERVER
 from utils.logger import Logger
 from datetime import datetime, timedelta
 import pandas as pd
@@ -10,13 +11,28 @@ import time
 import csv
 import os
 import json
+import httpx
 
 
-BASE_API_URL = "http://localhost:5001"
 
 today = datetime.now()
 
 logger = Logger().get_logger()
+
+
+def post_response_webhook(response):
+    try:
+        # ── Forward simples ──
+        
+        with httpx.Client(timeout=5) as client:
+            client.post(
+                WEBHOOK_HOMESERVER,
+                json=response,
+                headers={"X-API-Key": API_KEY_HOMESERVER, "Content-Type": "application/json"}
+            )
+    except Exception:
+        logger.info(msg=f"Error - Falha ao enviar webhook para {WEBHOOK_HOMESERVER} - {response}")
+  # não trava o legado
 
 
 def check_response(response):
@@ -34,7 +50,7 @@ def check_response(response):
                     template_id = str(value.get("message_template_id"))
                     template_name = str(value.get("message_template_name"))
                     new_quality_score = str(value.get("new_quality_score"))
-                    logger.info(f"ATUALIZAÇÃO DE QUALIDADE DA TEMPLATE: Template: {template_name}, ID: {template_id}, Nova qualidade: {new_quality_score}")
+                    logger.info(msg=f"ATUALIZAÇÃO DE QUALIDADE DA TEMPLATE: Template: {template_name}, ID: {template_id}, Nova qualidade: {new_quality_score}")
 
                 if value:
                     phone_number_id = value["metadata"]["phone_number_id"]
@@ -75,8 +91,10 @@ def check_response(response):
                             message_status = status["status"]
                             recipient_id = status["recipient_id"]
                             # Em caso de Falha, inserir no banco de dados.
-                            if message_status == "failed":                                
-                                if status["errors"]:                                    
+                            if message_status == "failed":
+                                error_message = ""
+                                error_code = ""
+                                if status.get("errors"):                                    
                                     error_message = status["errors"][0]["message"]
                                     error_code = status["errors"][0]["code"]
                                 message_update_status(
@@ -87,6 +105,7 @@ def check_response(response):
                                     error_message=error_message,
                                     error_code=error_code,
                                 )
+                                remover_zap_enviados(message_id)
                                 continue
                             # Atualiza o status das mensagens já registradas.
                             # Alterado a pedido do Anderson, para registrar todos as etapas da mensagem.
@@ -122,6 +141,31 @@ def descadastrar_numero_sair(message_id, nr_whatsapp):
         pg.desconectar()
     except Exception as e:
         logger.error(f"Erro - {e}")
+
+
+def remover_zap_enviados(message_id):
+    """
+    Remove registro da tabela zapenviados em caso de falha no envio.
+    Permite que o sistema tente enviar novamente se necessário.
+    """
+    logger.info(f"Removendo registro de zapenviados por falha - ID: {message_id}")
+    try:
+        pg = db_connect()
+        pg.conectar()
+        cursor = pg.conn.cursor()
+        
+        # Deleta baseado no messageid
+        cursor.execute("DELETE FROM zapenviados WHERE messageid = %s", (message_id,))
+        
+        if cursor.rowcount > 0:
+             logger.info(f"Registro deletado com sucesso: {message_id}")
+        else:
+             logger.info(f"Registro não encontrado em zapenviados: {message_id}")
+        
+        pg.conn.commit()
+        pg.desconectar()
+    except Exception as e:
+        logger.error(f"Erro ao remover de zapenviados - {e}")
 
 
 
@@ -928,3 +972,64 @@ def agendar_disparo(data_agendamento, usuario, cartorio, arquivo):
     
 
     return {"Status": "Sucesso"}
+
+
+def reprocess_logs_from_file(file_path):
+    """
+    Lê um arquivo de log, extrai os payloads (dicionários) e os reprocessa
+    chamando check_response(), simulando o recebimento do webhook.
+    """
+    logger.info(f"Iniciando reprocessamento do arquivo: {file_path}")
+    count_success = 0
+    count_error = 0
+    count_ignored = 0
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # Procura pelo início de um dicionário Python (log salvo com aspas simples)
+                # Padrão esperado: ... - INFO - {'object': ...
+                start_index = line.find("{'object':")
+                if start_index == -1:
+                    start_index = line.find('{"object":') # Tenta JSON padrão
+                
+                if start_index != -1:
+                    # Encontra o último fechamento de chave
+                    end_index = line.rfind("}")
+                    
+                    if end_index != -1 and end_index > start_index:
+                        payload_str = line[start_index : end_index + 1]
+                        try:
+                            # Converte string representativa de dict Python para dict real
+                            payload = ast.literal_eval(payload_str)
+                            
+                            # logger.info(f"Reprocessando payload...") # Comentado para poluir menos
+                            check_response(payload)
+                            count_success += 1
+                            from time import sleep
+                            sleep(2)
+                        except Exception as e:
+                            print(f"Erro ao converter linha: {e}")
+                            count_error += 1
+                    else:
+                        count_ignored += 1
+                else:
+                    count_ignored += 1
+                    
+        logger.info(f"Reprocessamento finalizado. Sucesso: {count_success}, Erros: {count_error}, Ignorados: {count_ignored}")
+        
+    except Exception as e:
+        logger.error(f"Erro ao abrir arquivo de log: {e}")
+
+if __name__ == "__main__":
+    # Executa o reprocessamento se chamado diretamente
+    target_file = "payload.txt"
+    if os.path.exists(target_file):
+        print(f"Arquivo {target_file} encontrado. Iniciando processamento...")
+        reprocess_logs_from_file(target_file)
+    else:
+        print(f"Arquivo {target_file} não encontrado no diretório atual.")
