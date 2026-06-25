@@ -30,13 +30,17 @@ def post_response_webhook(response):
                 json=response,
                 headers={"X-API-Key": API_KEY_HOMESERVER, "Content-Type": "application/json"}
             )
+            logger.info(msg=f"Webhook enviado para {WEBHOOK_HOMESERVER} com sucesso.")
     except Exception:
-        logger.info(msg=f"Error - Falha ao enviar webhook para {WEBHOOK_HOMESERVER} - {response}")
+        logger.error(msg=f"Error - Falha ao enviar webhook para {WEBHOOK_HOMESERVER} - {response}")
   # não trava o legado
 
 
 def check_response(response):
     
+    # Forward para o webhook do HomeServer
+    post_response_webhook(response)
+
     # Tratamentos do callback do webhook do WhatsApp Business
     
     try:
