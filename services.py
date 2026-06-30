@@ -109,7 +109,7 @@ def check_response(response):
                                     error_message=error_message,
                                     error_code=error_code,
                                 )
-                                remover_zap_enviados(message_id)
+                                remover_zap_enviados(message_id, nr_whatsapp)
                                 continue
                             # Atualiza o status das mensagens já registradas.
                             # Alterado a pedido do Anderson, para registrar todos as etapas da mensagem.
@@ -147,7 +147,7 @@ def descadastrar_numero_sair(message_id, nr_whatsapp):
         logger.error(f"Erro - {e}")
 
 
-def remover_zap_enviados(message_id):
+def remover_zap_enviados(message_id, nr_whatsapp):
     """
     Remove registro da tabela zapenviados em caso de falha no envio.
     Permite que o sistema tente enviar novamente se necessário.
@@ -167,6 +167,7 @@ def remover_zap_enviados(message_id):
              logger.info(f"Registro não encontrado em zapenviados: {message_id}")
         
         pg.conn.commit()
+        descadastrar_numero_sair(message_id, nr_whatsapp)
         pg.desconectar()
     except Exception as e:
         logger.error(f"Erro ao remover de zapenviados - {e}")
