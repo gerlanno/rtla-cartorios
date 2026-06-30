@@ -109,7 +109,7 @@ def check_response(response):
                                     error_message=error_message,
                                     error_code=error_code,
                                 )
-                                remover_zap_enviados(message_id, nr_whatsapp)
+                                remover_zap_enviados(message_id, recipient_id)
                                 continue
                             # Atualiza o status das mensagens já registradas.
                             # Alterado a pedido do Anderson, para registrar todos as etapas da mensagem.
