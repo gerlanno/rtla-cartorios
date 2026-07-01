@@ -158,6 +158,22 @@ def remover_zap_enviados(message_id, nr_whatsapp):
         pg.conectar()
         cursor = pg.conn.cursor()
         
+        try:
+            # Tenta buscar o whatsapp pelo message_id
+            cursor.execute("SELECT whatsapp FROM zapenviados WHERE messageid = %s", (message_id,))
+            whatsapp = cursor.fetchone()
+        except Exception as e:
+            logger.error(f"Erro ao buscar whatsapp - {e}")
+
+        if whatsapp:
+            try:
+                cursor.execute("UPDATE contatos SET validado = false, detalhes = 'Message undeliverable' WHERE telefone LIKE %s", (f"%{whatsapp}%",))
+                pg.conn.commit()
+                logger.info(f"Número falhado descadastrado: {whatsapp}")
+            except Exception as e:
+                logger.error(f"Erro ao atualizar contatos - {e}")
+
+        
         # Deleta baseado no messageid
         cursor.execute("DELETE FROM zapenviados WHERE messageid = %s", (message_id,))
         
@@ -167,7 +183,7 @@ def remover_zap_enviados(message_id, nr_whatsapp):
              logger.info(f"Registro não encontrado em zapenviados: {message_id}")
         
         pg.conn.commit()
-        descadastrar_numero_sair(message_id, nr_whatsapp)
+        
         pg.desconectar()
     except Exception as e:
         logger.error(f"Erro ao remover de zapenviados - {e}")
