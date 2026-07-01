@@ -167,9 +167,12 @@ def remover_zap_enviados(message_id, nr_whatsapp):
 
         if whatsapp:
             try:
-                cursor.execute("UPDATE contatos SET validado = false, detalhes = 'Message undeliverable' WHERE telefone LIKE %s", (f"%{whatsapp}%",))
+                cursor.execute("UPDATE contatos SET validado = false, detalhes = 'Message undeliverable' WHERE telefone = %s", (whatsapp,))
+                if cursor.rowcount > 0:
+                    logger.info(f"Número falhado descadastrado: {whatsapp}")
+                else:
+                    logger.info(f"Número falhado não encontrado em contatos: {whatsapp}")
                 pg.conn.commit()
-                logger.info(f"Número falhado descadastrado: {whatsapp}")
             except Exception as e:
                 logger.error(f"Erro ao atualizar contatos - {e}")
 
