@@ -53,15 +53,22 @@ def setup_routes(app, db):
             else:
                 return redirect(url_for("login"))
         elif request.method == "POST":
-            data = request.get_json()
+            # 🔥 LOG CRU ANTES DE QUALQUER PROCESSAMENTO
+            logger.info(f"🔥 WEBHOOK RAW | CT: {request.content_type} | BODY: {request.data[:3000]}")
+            logger.info(f"🔥 HEADERS: {dict(request.headers)}")
+
+            try:
+                data = request.get_json(force=True, silent=False)
+            except Exception as e:
+                logger.error(f"🔥 ERRO PARSE JSON: {e} | RAW: {request.data[:3000]}")
+                return "<h1>Bad Request</h1>", 400
+
             if data:
-
-                # message_update_status(data) # Chama a função de atualização de status
-                logger.info(data)
+                logger.info(f"🔥 DATA PARSED: {data}")
                 check_response(data)
-
                 return jsonify({"status": "success"}), 200
-            return "<h1>Bad Request</h1>", 400  # Para o caso de dados inválidos no POST
+            logger.warning(f"🔥 get_json retornou None | RAW: {request.data[:3000]}")
+            return "<h1>Bad Request</h1>", 400
 
     @app.route("/disparos", methods=["GET", "POST"])
     @login_required
